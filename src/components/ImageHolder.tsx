@@ -92,8 +92,11 @@ const ImageHolder = () => {
         group="shared"
         className="react-sortablejs flex space-x-4 p-4 bg-stone-700 min-h-[7rem] flex-wrap mt-8"
       >
-        {images.map((image) => (
-          <img src={image.url} key={image.id} className="h-20 w-auto" alt={`Image ${image.id}`} />
+        {images.length === 0 ? (
+          <p className='text-gray-400 text-center w-full'>Drag & Drop or Copy and Paste images in here!<br/>If this is your first time using this you can right click tiers to edit them and drag them about, clicking the plus will add more tiers</p>
+        ) :
+        images.map((image) => (
+          <img src={image.url} key={image.id} className="h-20 w-auto" />
         ))}
       </ReactSortable>
   );
