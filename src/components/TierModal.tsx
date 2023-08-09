@@ -7,7 +7,7 @@ interface ModalProps {
 	onAddTier: (color: string, name: string) => void;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
+const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
 	const [name, setName] = useState("");
 	const [color, setColor] = useState("");
 
@@ -103,4 +103,4 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
 	);
 };
 
-export default Modal;
+export default TierModal;

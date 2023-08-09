@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { SketchPicker } from "react-color";
+import { StylingContext } from "../App"
 
 interface ImageItem {
 	id: number;
@@ -22,6 +23,7 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 		left: 0,
 		top: 0
 	});
+	const {style, setStyle} = useContext(StylingContext) || {};
 
 	const contextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -93,7 +95,7 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 				className="react-sortablejs flex space-x-[2px] flex-1 flex-wrap"
 			>
 				{images.map((image) => (
-					<img src={image.url} key={image.id} className="h-20 w-auto" />
+					<img src={image.url} key={image.id} className={`h-20 w-auto ${style}`} />
 				))}
 			</ReactSortable>
 

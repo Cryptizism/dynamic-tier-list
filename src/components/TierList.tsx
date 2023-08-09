@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Tier from "./Tier";
-import Modal from "./Modal";
+import TierModal from "./TierModal";
 import { ReactSortable } from "react-sortablejs";
 
 const TierList = () => {
@@ -52,7 +52,7 @@ const TierList = () => {
 			<button onClick={openModal} className="ml-[2px] w-24 bg-green-300">
 				+
 			</button>
-			<Modal isOpen={isModalOpen} onClose={closeModal} onAddTier={addTier} />
+			<TierModal isOpen={isModalOpen} onClose={closeModal} onAddTier={addTier} />
 		</>
 	);
 };
