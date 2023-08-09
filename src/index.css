@@ -1,27 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-.red{
-  background-color: #FF7F7F
-}
-
-.orange{
-  background-color: #FFBF7F
-}
-
-.gold{
-  background-color: #FFDF80
-}
-
-.yellow{
-  background-color: #FFFF7F
-}
-
-.lime{
-  background-color: #BFFF7F
-}
-
-.green{
-  background-color: #7FFF7F
-}
