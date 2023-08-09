@@ -9,14 +9,14 @@ interface ImageItem {
 
 interface TierProps {
   color: string;
-  id: string;
+  name: string;
   onDelete: () => void;
 }
 
-const Tier: React.FC<TierProps> = ({ color, id, onDelete }) => {
+const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [editedColor, setEditedColor] = useState(color);
-  const [editedName, setEditedName] = useState(id);
+  const [editedName, setEditedName] = useState(name);
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ left: 0, top: 0 });
 
@@ -27,8 +27,8 @@ const Tier: React.FC<TierProps> = ({ color, id, onDelete }) => {
   }, [color]);
 
   useEffect(() => {
-    setEditedName(id);
-  }, [id]);
+    setEditedName(name);
+  }, [name]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -122,7 +122,7 @@ const Tier: React.FC<TierProps> = ({ color, id, onDelete }) => {
             <label className='block text-gray-300 font-semibold'>Edit Name</label>
             <input
               type='text'
-              className='mt-1 p-2 w-full border rounded-md focus:ring focus:ring-indigo-300'
+              className='mt-1 p-2 w-full border rounded-md focus:ring focus:ring-indigo-300 text-black'
               value={editedName}
               onChange={handleNameChange}
             />

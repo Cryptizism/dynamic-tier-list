@@ -26,12 +26,17 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
     onClose();
   };
 
+  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement
+    if(target.id == "modal-bg") onClose();
+  }
+
   if (!isOpen) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 dark:bg-opacity-70">
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 dark:bg-opacity-70" id="modal-bg" onClick={handleClick}>
       <div className="bg-zinc-800 p-6 rounded-md shadow-md">
         <h2 className="text-lg font-semibold mb-4 text-white">New Tier</h2>
         <form onSubmit={handleSubmit}>
@@ -42,7 +47,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
             <input
               type="text"
               id="name"
-              className="mt-1 p-2 w-full border rounded-md focus:ring focus:ring-indigo-300"
+              className="mt-1 p-2 w-full border rounded-md focus:ring focus:ring-indigo-300 text-black"
               value={name}
               onChange={handleNameChange}
             />

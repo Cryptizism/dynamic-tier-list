@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ReactSortable } from 'react-sortablejs';
 import Tier from './Tier';
 import Modal from './Modal';
+import { ReactSortable } from "react-sortablejs"
 
 const TierList = () => {
   const [tiers, setTiers] = useState([
@@ -34,18 +34,24 @@ const TierList = () => {
 
   return (
     <>
-      <ReactSortable list={tiers} setList={setTiers} className='flex flex-col gap-[2px] p-[2px] bg-black resize-x overflow-x-auto min-w-[8rem]' delay={10}>
+        <ReactSortable
+        list={tiers}
+        setList={setTiers}
+        tag="div"
+        group="shared"
+        className='flex flex-col gap-[2px] p-[2px] bg-black resize-x overflow-x-auto min-w-[8rem]'
+      >
         {tiers.map((tier, index) => (
-            <Tier
-              key={index}
-              color={tier.color}
-              id={tier.id}
-              onDelete={() => deleteTier(index)}
-            />
-          ))}
-      </ReactSortable>
-      <button onClick={openModal} className='ml-[2px] w-24 bg-green-300'>+</button>
-      <Modal isOpen={isModalOpen} onClose={closeModal} onAddTier={addTier} />
+          <Tier
+            key={index}
+            color={tier.color}
+            name={tier.id}
+            onDelete={() => deleteTier(index)}
+          />
+        ))}
+        </ReactSortable>
+        <button onClick={openModal} className='ml-[2px] w-24 bg-green-300'>+</button>
+        <Modal isOpen={isModalOpen} onClose={closeModal} onAddTier={addTier} />
     </>
   );
 };
