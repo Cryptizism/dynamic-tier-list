@@ -90,7 +90,7 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 				setList={setImages}
 				tag="div"
 				group="shared"
-				className="react-sortablejs flex space-x-[2px] flex-1"
+				className="react-sortablejs flex space-x-[2px] flex-1 flex-wrap"
 			>
 				{images.map((image) => (
 					<img src={image.url} key={image.id} className="h-20 w-auto" />
