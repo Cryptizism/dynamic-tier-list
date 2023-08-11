@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { SketchPicker } from "react-color";
 import { StylingContext, TierContext } from "../App"
+import Image from "./Image"
 
 interface ImageItem {
 	id: number;
@@ -83,7 +84,7 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 		<div className="flex bg-[#1A1A17] gap-[2px]">
 			<div
 				onContextMenu={handleContextMenu}
-				className={`w-24 min-h-[5rem] flex justify-center items-center handle`}
+				className={`w-24 min-h-[5rem] flex justify-center items-center handle cursor-move`}
 				style={{ backgroundColor: editedColor }}
 			>
 				<p className="text-center" style={{ overflowWrap: "anywhere" }}>
@@ -98,7 +99,15 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 				className="react-sortablejs flex space-x-[2px] flex-1 flex-wrap"
 			>
 				{images.map((image) => (
-					<img src={image.url} key={image.id} className={`h-20 w-auto ${style}`} />
+					<Image
+					key={image.id}
+					imageUrl={image.url}
+					onDelete={() => {
+						// Implement your delete logic here
+						const updatedImages = images.filter((img) => img.id !== image.id);
+						setImages(updatedImages);
+					}}
+					/>
 				))}
 			</ReactSortable>
 

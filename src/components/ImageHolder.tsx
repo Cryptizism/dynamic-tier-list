@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { ReactSortable } from "react-sortablejs";
 import SettingsModal from "./SettingsModal";
 import { StylingContext } from "../App";
+import Image from "./Image"
 
 interface ImageItem {
 	id: number;
@@ -114,7 +115,15 @@ const ImageHolder = () => {
 					</p>
 				) : (
 					images.map((image) => (
-						<img src={image.url} key={image.id} className={`h-20 w-auto ${style}`} />
+						<Image
+						key={image.id}
+						imageUrl={image.url}
+						onDelete={() => {
+							// Implement your delete logic here
+							const updatedImages = images.filter((img) => img.id !== image.id);
+							setImages(updatedImages);
+						}}
+						/>
 					))
 				)}
 			</ReactSortable>
