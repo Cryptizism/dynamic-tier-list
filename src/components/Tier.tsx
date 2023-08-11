@@ -80,7 +80,7 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 		<div className="flex bg-[#1A1A17] gap-[2px]">
 			<div
 				onContextMenu={handleContextMenu}
-				className={`w-24 min-h-[5rem] flex justify-center items-center`}
+				className={`w-24 min-h-[5rem] flex justify-center items-center handle`}
 				style={{ backgroundColor: editedColor }}
 			>
 				<p className="text-center" style={{ overflowWrap: "anywhere" }}>

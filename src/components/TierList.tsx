@@ -39,6 +39,7 @@ const TierList = () => {
 				setList={setTiers}
 				tag="div"
 				className="flex flex-col gap-[2px] p-[2px] bg-black resize-x overflow-x-auto min-w-[8rem]"
+				handle=".handle"
 			>
 				{tiers.map((tier, index) => (
 					<Tier
