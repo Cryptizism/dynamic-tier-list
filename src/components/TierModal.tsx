@@ -39,7 +39,7 @@ const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
 		<div
 			className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 dark:bg-opacity-70"
 			id="modal-bg"
-			onClick={handleClick}
+			onMouseDown={handleClick}
 		>
 			<div className="bg-zinc-800 p-6 rounded-md shadow-md">
 				<h2 className="text-lg font-semibold mb-4 text-white">New Tier</h2>
