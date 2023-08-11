@@ -13,8 +13,8 @@ interface ModalProps {
 }
 
 const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
-	const [selectedAspectRatio, setSelectedAspectRatio] = useState("preserve");
-	const { setStyle } = useContext(StylingContext);
+    const { style, setStyle } = useContext(StylingContext);
+	const [selectedAspectRatio, setSelectedAspectRatio] = useState(style);
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
