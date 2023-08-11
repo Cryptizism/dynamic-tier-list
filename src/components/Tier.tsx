@@ -22,7 +22,7 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 	  left: 0,
 	  top: 0
 	});
-	const { style, setStyle } = useContext(StylingContext) || {};
+	
 	const { tiers, setTiers } = useContext(TierContext) || {};
   
 	const contextMenuRef = useRef<HTMLDivElement>(null);

@@ -11,7 +11,6 @@ interface ImageItem {
 
 const ImageHolder = () => {
 	const [images, setImages] = useState<ImageItem[]>([]);
-	const {style, setStyle} = useContext(StylingContext) || {};
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 

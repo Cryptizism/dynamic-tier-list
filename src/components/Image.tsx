@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
+import { StylingContext } from "../App";
 
 interface ImageWithContextMenuProps {
   imageUrl: string;
@@ -10,6 +11,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
   onDelete
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const { style, setStyle } = useContext(StylingContext) || {};
 
   const handleMouseEnter = () => {
     setIsHovered(true);
@@ -23,7 +25,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
     <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       <img
         src={imageUrl}
-        className="h-20 w-auto"
+        className={style}
       />
       {isHovered && (
         <div className="absolute top-0 right-0 p-1 cursor-pointer text-red-500" onClick={onDelete}>
