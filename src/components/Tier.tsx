@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { SketchPicker } from "react-color";
-import { StylingContext, TierContext } from "../App"
+import { TierContext } from "../App"
 import Image from "./Image"
 
 interface ImageItem {
@@ -16,13 +16,18 @@ interface TierProps {
 }
 
 const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
-	const [images, setImages] = useState<ImageItem[]>([]);
+
+	const [images, setImages] = useState<ImageItem[]>(() => {
+		const storedImages = localStorage.getItem(`tierImages_${color}_${name}`);
+		return storedImages ? JSON.parse(storedImages) : [];
+	});
+
 	const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 	const [contextMenuPosition, setContextMenuPosition] = useState({
 	  left: 0,
 	  top: 0
 	});
-	
+
 	const { tiers, setTiers } = useContext(TierContext) || {};
   
 	const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -48,6 +53,13 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 			window.removeEventListener("click", handleOutsideClick);
 		};
 	}, [isContextMenuOpen]);
+
+	useEffect(() => {
+		localStorage.setItem(
+		  `tierImages_${color}_${name}`,
+		  JSON.stringify(images)
+		);
+	  }, [images, color, name]);
 
 	const handleColorChange = (newColor: any) => {
 		if (tierIndex !== -1) {
@@ -103,7 +115,6 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 					key={image.id}
 					imageUrl={image.url}
 					onDelete={() => {
-						// Implement your delete logic here
 						const updatedImages = images.filter((img) => img.id !== image.id);
 						setImages(updatedImages);
 					}}
@@ -114,7 +125,7 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 			{isContextMenuOpen && (
 				<div
 					ref={contextMenuRef}
-					className="fixed bg-zinc-800 text-white p-2 rounded-md shadow-2xl"
+					className="fixed bg-zinc-800 text-white p-2 rounded-md shadow-2xl z-10"
 					style={{
 						left: contextMenuPosition.left,
 						top: contextMenuPosition.top

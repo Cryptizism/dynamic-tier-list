@@ -21,7 +21,6 @@ const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		// Call the onAddTier function with the new tier's data
 		onAddTier(color, name);
 		onClose();
 	};

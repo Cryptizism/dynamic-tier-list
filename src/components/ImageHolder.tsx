@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import { ReactSortable } from "react-sortablejs";
 import SettingsModal from "./SettingsModal";
-import { StylingContext } from "../App";
-import Image from "./Image"
+import Image from "./Image";
 
 interface ImageItem {
 	id: number;
@@ -10,9 +9,12 @@ interface ImageItem {
 }
 
 const ImageHolder = () => {
-	const [images, setImages] = useState<ImageItem[]>([]);
+	const [images, setImages] = useState<ImageItem[]>(() => {
+		const storedImages = localStorage.getItem("imageHolder");
+		return storedImages ? JSON.parse(storedImages) : [];
+	});
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+	const [isModalOpen, setIsModalOpen] = useState(false);
 
 	const openModal = () => {
 		setIsModalOpen(true);
@@ -95,6 +97,10 @@ const ImageHolder = () => {
 		};
 	}, []);
 
+	useEffect(() => {
+		localStorage.setItem("imageHolder", JSON.stringify(images));
+	}, [images]);
+
 	return (
 		<div className="bg-stone-700 flex mt-8">
 			<ReactSortable
@@ -115,13 +121,14 @@ const ImageHolder = () => {
 				) : (
 					images.map((image) => (
 						<Image
-						key={image.id}
-						imageUrl={image.url}
-						onDelete={() => {
-							// Implement your delete logic here
-							const updatedImages = images.filter((img) => img.id !== image.id);
-							setImages(updatedImages);
-						}}
+							key={image.id}
+							imageUrl={image.url}
+							onDelete={() => {
+								const updatedImages = images.filter(
+									(img) => img.id !== image.id
+								);
+								setImages(updatedImages);
+							}}
 						/>
 					))
 				)}
@@ -132,7 +139,7 @@ const ImageHolder = () => {
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke-width="1.5"
-          stroke="currentColor"
+					stroke="currentColor"
 					className="w-6 h-6 text-gray-400"
 				>
 					<path
@@ -147,7 +154,13 @@ const ImageHolder = () => {
 					/>
 				</svg>
 			</button>
-      	<SettingsModal isOpen={isModalOpen} onClose={()=>{closeModal()}} setImages={setImages}/>
+			<SettingsModal
+				isOpen={isModalOpen}
+				onClose={() => {
+					closeModal();
+				}}
+				setImages={setImages}
+			/>
 		</div>
 	);
 };

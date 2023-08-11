@@ -5,7 +5,7 @@ import { ReactSortable } from "react-sortablejs";
 import { TierContext } from "../App";
 
 const TierList = () => {
-	const {tiers, setTiers} = useContext(TierContext) || {};
+	const { tiers, setTiers } = useContext(TierContext);
 
 	const addTier = (color: string, id: string) => {
 		const newTier = { color, id };
@@ -48,7 +48,11 @@ const TierList = () => {
 			<button onClick={openModal} className="ml-[2px] w-24 bg-green-300">
 				+
 			</button>
-			<TierModal isOpen={isModalOpen} onClose={closeModal} onAddTier={addTier} />
+			<TierModal
+				isOpen={isModalOpen}
+				onClose={closeModal}
+				onAddTier={addTier}
+			/>
 		</>
 	);
 };
