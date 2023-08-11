@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { SketchPicker } from "react-color";
-import { StylingContext } from "../App"
+import { StylingContext, TierContext } from "../App"
 
 interface ImageItem {
 	id: number;
@@ -16,24 +16,19 @@ interface TierProps {
 
 const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 	const [images, setImages] = useState<ImageItem[]>([]);
-	const [editedColor, setEditedColor] = useState(color);
-	const [editedName, setEditedName] = useState(name);
 	const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 	const [contextMenuPosition, setContextMenuPosition] = useState({
-		left: 0,
-		top: 0
+	  left: 0,
+	  top: 0
 	});
-	const {style, setStyle} = useContext(StylingContext) || {};
-
+	const { style, setStyle } = useContext(StylingContext) || {};
+	const { tiers, setTiers } = useContext(TierContext) || {};
+  
 	const contextMenuRef = useRef<HTMLDivElement>(null);
 
-	useEffect(() => {
-		setEditedColor(color);
-	}, [color]);
-
-	useEffect(() => {
-		setEditedName(name);
-	}, [name]);
+	const tierIndex = tiers.findIndex((tier) => tier.color === color && tier.id === name);
+  	const editedColor = tierIndex !== -1 ? tiers[tierIndex].color : color;
+  	const editedName = tierIndex !== -1 ? tiers[tierIndex].id : name;
 
 	useEffect(() => {
 		const handleOutsideClick = (e: MouseEvent) => {
@@ -54,12 +49,20 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 	}, [isContextMenuOpen]);
 
 	const handleColorChange = (newColor: any) => {
-		setEditedColor(newColor.hex);
-	};
-
-	const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-		setEditedName(event.target.value);
-	};
+		if (tierIndex !== -1) {
+		  const updatedTiers = [...tiers];
+		  updatedTiers[tierIndex].color = newColor.hex;
+		  setTiers(updatedTiers);
+		}
+	  };
+	
+	  const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		if (tierIndex !== -1) {
+		  const updatedTiers = [...tiers];
+		  updatedTiers[tierIndex].id = event.target.value;
+		  setTiers(updatedTiers);
+		}
+	  };
 
 	const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
 		e.preventDefault();

@@ -1,16 +1,11 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import Tier from "./Tier";
 import TierModal from "./TierModal";
 import { ReactSortable } from "react-sortablejs";
+import { TierContext } from "../App";
 
 const TierList = () => {
-	const [tiers, setTiers] = useState([
-		{ color: "#FF7F7F", id: "S" },
-		{ color: "#FFBF7F", id: "A" },
-		{ color: "#FFDF80", id: "B" },
-		{ color: "#FFFF7F", id: "C" },
-		{ color: "#BFFF7F", id: "D" }
-	]);
+	const {tiers, setTiers} = useContext(TierContext) || {};
 
 	const addTier = (color: string, id: string) => {
 		const newTier = { color, id };

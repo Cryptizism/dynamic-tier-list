@@ -3,20 +3,40 @@ import './index.css';
 import TierList from './components/TierList';
 import ImageHolder from './components/ImageHolder';
 
-interface styleState {
+interface StyleState {
   style: string;
-  setStyle: React.Dispatch<React.SetStateAction<string>>
+  setStyle: React.Dispatch<React.SetStateAction<string>>;
 }
 
-export const StylingContext = React.createContext<styleState | null>(null);
+interface Tier {
+  color: string;
+  id: string;
+}
+
+interface TierState {
+  tiers: Tier[];
+  setTiers: React.Dispatch<React.SetStateAction<Tier[]>>;
+}
+
+export const StylingContext = React.createContext<StyleState>({} as StyleState);
+export const TierContext = React.createContext<TierState>({} as TierState);
 
 const App = () => {
   const [style, setStyle] = useState("preserve");
+  const [tiers, setTiers] = useState([
+		{ color: "#FF7F7F", id: "S" },
+		{ color: "#FFBF7F", id: "A" },
+		{ color: "#FFDF80", id: "B" },
+		{ color: "#FFFF7F", id: "C" },
+		{ color: "#BFFF7F", id: "D" }
+	]);
 
   return (
     <div className="p-8 min-h-[100vh] bg-stone-800">
       <StylingContext.Provider value={{style, setStyle}}>
-        <TierList />
+        <TierContext.Provider value={{tiers, setTiers}}>
+          <TierList />
+        </TierContext.Provider>
         <ImageHolder />
       </StylingContext.Provider>
     </div>
