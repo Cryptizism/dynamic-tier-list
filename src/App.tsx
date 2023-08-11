@@ -22,7 +22,10 @@ export const StylingContext = React.createContext<StyleState>({} as StyleState);
 export const TierContext = React.createContext<TierState>({} as TierState);
 
 const App = () => {
-  const [style, setStyle] = useState("preserve");
+  const [style, setStyle] = useState(() =>{
+    const storedRatio = localStorage.getItem("ratio");
+    return storedRatio ? storedRatio : "preserve";
+  });
   const [tiers, setTiers] = useState<Tier[]>(() => {
     const storedTiers = localStorage.getItem("tiers");
     return storedTiers ? JSON.parse(storedTiers) : [
@@ -37,6 +40,10 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem("tiers", JSON.stringify(tiers));
   }, [tiers]);
+
+  useEffect(() => {
+    localStorage.setItem("ratio", style);
+  }, [style]);
 
   return (
     <div className="p-8 min-h-[100vh] bg-stone-800">
