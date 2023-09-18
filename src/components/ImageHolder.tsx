@@ -63,11 +63,13 @@ const ImageHolder = () => {
 					const item = items[i];
 					if (item.type.indexOf("image") !== -1) {
 						const blob = item.getAsFile();
-						if (blob) {
-							const imageUrl = URL.createObjectURL(blob);
+						let reader = new FileReader();
+						reader.readAsDataURL(blob || new Blob()); 
+						reader.onloadend = function() {
+							let base64data : any = reader.result;
 							setImages((prevImages) => [
 								...prevImages,
-								{ id: new Date().getTime(), url: imageUrl }
+								{ id: new Date().getTime(), url: base64data }
 							]);
 						}
 					}
