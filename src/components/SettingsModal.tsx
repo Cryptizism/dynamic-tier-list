@@ -1,5 +1,6 @@
 import React, { FormEvent, useContext, useState } from "react";
 import { StylingContext } from "../App";
+import { toBlob } from 'html-to-image';
 
 interface ImageItem {
 	id: number;
@@ -34,6 +35,19 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 		onClose();
 		window.location.reload();
 	};
+
+    const handleCopyImage = async () => {
+        const node = document.getElementById('tierlist');
+        if (node) {
+            try {
+                const blob = await toBlob(node);
+                const item = new ClipboardItem({ "image/png": blob as Blob });
+                await navigator.clipboard.write([item]);
+            } catch (error) {
+                console.error('Failed to copy image: ', error);
+            }
+        }
+    };
 
 	if (!isOpen) {
 		return null;
@@ -96,7 +110,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 							</label>
 						</div>
 					</div>
-					<div className="mt-4">
+					<div className="my-4 flex flex-row gap-2">
 						<button
 							type="button"
 							className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
@@ -104,6 +118,13 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 						>
 							Clear Local Storage
 						</button>
+						<button
+                            type="button"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                            onClick={handleCopyImage}
+                        >
+                            Copy Image
+                        </button>
 					</div>
 					<div className="flex justify-end">
 						<button
