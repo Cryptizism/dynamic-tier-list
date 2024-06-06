@@ -24,23 +24,44 @@ const ImageHolder = () => {
 		setIsModalOpen(false);
 	};
 
+	const compressAndDownscaleImage = (base64: string, maxHeight: number, quality: number): Promise<string> => {
+		return new Promise((resolve) => {
+			const img = document.createElement("img");
+          	img.src = base64;
+          	img.onload = function () {
+				const canvas = document.createElement("canvas");
+				const ctx = canvas.getContext("2d");
+				const maxHeight = 5 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+				const scale = maxHeight / img.height;
+				canvas.width = img.width * scale;
+				canvas.height = maxHeight;
+				ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+				const compressedImageData = canvas.toDataURL("image/jpeg", quality);
+				resolve(compressedImageData);
+		  	};
+		});
+	  };
+
 	const handleDrop = (event: DragEvent) => {
 		event.preventDefault();
 		if (event.dataTransfer == null) return;
 		if (event.dataTransfer.getData("application/x-tier") !== "true") {
 			if (event.dataTransfer.files.length > 0) {
 				const files = Array.from(event.dataTransfer.files);
+				let count = 0;
 				files.forEach((file) => {
+					count++;
 					if (!file.type.startsWith("image/")) return;
 					const reader = new FileReader();
-					reader.onload = function (event) {
+					reader.onload = async function (event) {
 						if (event.target == null) return;
 						const imageData = event.target.result;
+						const compressedImageData = await compressAndDownscaleImage(imageData as string, 80, 1);
 						setImages((prevImages) => [
 							...prevImages,
 							{
-								id: new Date().getTime() + Math.floor(Math.random() * 1000),
-								url: imageData as string
+								id: new Date().getTime() + count,
+								url: compressedImageData as string
 							}
 						]);
 					};
@@ -65,11 +86,12 @@ const ImageHolder = () => {
 						const blob = item.getAsFile();
 						let reader = new FileReader();
 						reader.readAsDataURL(blob || new Blob()); 
-						reader.onloadend = function() {
+						reader.onloadend = async function() {
 							let base64data : any = reader.result;
+							const compressedImageData = await compressAndDownscaleImage(base64data as string, 80, 1);
 							setImages((prevImages) => [
 								...prevImages,
-								{ id: new Date().getTime(), url: base64data }
+								{ id: new Date().getTime() + i, url: compressedImageData }
 							]);
 						}
 					}
