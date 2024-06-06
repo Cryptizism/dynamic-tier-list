@@ -42,7 +42,7 @@ const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
 		>
 			<div className="bg-zinc-800 p-6 rounded-md shadow-md">
 				<h2 className="text-lg font-semibold mb-4 text-white">New Tier</h2>
-				<form onSubmit={handleSubmit}>
+				<form autoComplete="false" onSubmit={handleSubmit}>
 					<div className="mb-4">
 						<label
 							htmlFor="name"
