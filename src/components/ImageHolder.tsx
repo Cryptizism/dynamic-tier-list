@@ -47,10 +47,9 @@ const ImageHolder = () => {
 		if (event.dataTransfer == null) return;
 		if (event.dataTransfer.getData("application/x-tier") !== "true") {
 			if (event.dataTransfer.files.length > 0) {
+				const time = new Date().getTime();
 				const files = Array.from(event.dataTransfer.files);
-				let count = 0;
-				files.forEach((file) => {
-					count++;
+				files.forEach((file, index) => {
 					if (!file.type.startsWith("image/")) return;
 					const reader = new FileReader();
 					reader.onload = async function (event) {
@@ -60,7 +59,7 @@ const ImageHolder = () => {
 						setImages((prevImages) => [
 							...prevImages,
 							{
-								id: new Date().getTime() + count,
+								id: time + index,
 								url: compressedImageData as string
 							}
 						]);
@@ -80,6 +79,7 @@ const ImageHolder = () => {
 		const handlePaste = (event: ClipboardEvent) => {
 			const items = event.clipboardData?.items;
 			if (items) {
+				const time = new Date().getTime();
 				for (let i = 0; i < items.length; i++) {
 					const item = items[i];
 					if (item.type.indexOf("image") !== -1) {
@@ -91,7 +91,7 @@ const ImageHolder = () => {
 							const compressedImageData = await compressAndDownscaleImage(base64data as string, 80, 1);
 							setImages((prevImages) => [
 								...prevImages,
-								{ id: new Date().getTime() + i, url: compressedImageData }
+								{ id: time + i, url: compressedImageData }
 							]);
 						}
 					}
@@ -122,7 +122,11 @@ const ImageHolder = () => {
 	}, []);
 
 	useEffect(() => {
-		localStorage.setItem("imageHolder", JSON.stringify(images));
+		try{
+			localStorage.setItem("imageHolder", JSON.stringify(images));
+		} catch (error) {
+			window.alert("Local storage is full :(");
+		}
 	}, [images]);
 
 	return (
