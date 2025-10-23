@@ -1,18 +1,52 @@
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent, FormEvent, useContext } from "react";
 import { SketchPicker } from "react-color";
+import { StylingContext, TierContext } from "../App";
 
 interface ModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onAddTier: (color: string, name: string) => void;
+	onAddTier: (color: string, tierLabel: string) => void;
 }
 
-const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
-	const [name, setName] = useState("");
+export const AddTierButton: React.FC = () => {
+	const { style } = useContext(StylingContext);
+	const { setTiers } = useContext(TierContext);
+	
+	const [isModalOpen, setIsModalOpen] = useState(false);
+
+	const openModal = () => {
+		setIsModalOpen(true);
+	};
+
+	const closeModal = () => {
+		setIsModalOpen(false);
+	};
+
+	const addTier = (color: string, tierLabel: string) => {
+		const newTier = { color: color || "#ffffff", tierLabel: tierLabel || "New Tier", id: Date.now() };
+		setTiers((prevTiers) => [...prevTiers, newTier]);
+	};
+
+	return (
+		<>
+			<button onClick={openModal} className="bg-stone-600 hover:bg-stone-700 text-white font-semibold py-2 px-4 my-4" style={{width: style.size * 1.2}}>
+				Add Tier
+			</button>
+			<TierModal
+				isOpen={isModalOpen}
+				onClose={closeModal}
+				onAddTier={addTier}
+			/>
+		</>
+	)
+}
+
+export const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
+	const [tierLabel, setTierLabel] = useState("");
 	const [color, setColor] = useState("");
 
-	const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
-		setName(event.target.value);
+	const handleTierLabelChange = (event: ChangeEvent<HTMLInputElement>) => {
+		setTierLabel(event.target.value);
 	};
 
 	const handleColorChange = (newColor: any) => {
@@ -21,7 +55,7 @@ const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		onAddTier(color, name);
+		onAddTier(color, tierLabel);
 		onClose();
 	};
 
@@ -45,17 +79,18 @@ const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
 				<form autoComplete="false" onSubmit={handleSubmit}>
 					<div className="mb-4">
 						<label
-							htmlFor="name"
+							htmlFor="tierLabel"
 							className="block text-sm font-medium text-gray-300"
 						>
-							Name
+							Tier Label
 						</label>
 						<input
 							type="text"
-							id="name"
+							placeholder="Tier Label"
+							id="tierLabel"
 							className="mt-1 p-2 w-full border rounded-md focus:ring focus:ring-indigo-300 text-black"
-							value={name}
-							onChange={handleNameChange}
+							value={tierLabel}
+							onChange={handleTierLabelChange}
 						/>
 					</div>
 					<div className="mb-4">
@@ -102,4 +137,3 @@ const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) => {
 	);
 };
 
-export default TierModal;

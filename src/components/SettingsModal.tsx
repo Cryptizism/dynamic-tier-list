@@ -15,14 +15,14 @@ interface ModalProps {
 
 const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
     const { style, setStyle } = useContext(StylingContext);
-	const [selectedAspectRatio, setSelectedAspectRatio] = useState(style);
+	const [selectedStyle, setSelectedStyle] = useState(style);
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		onClose();
 
 		if (!setStyle) return;
-		setStyle(selectedAspectRatio);
+		setStyle(selectedStyle);
 	};
 
 	const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -65,12 +65,9 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 				</h2>
 				<form onSubmit={handleSubmit}>
 					<div className="mb-4">
-						<label
-							htmlFor="aspect-ratio"
-							className="block text-sm font-medium text-gray-300"
-						>
+						<h3 className="block text-sm font-medium text-gray-300">
 							Aspect Ratio
-						</label>
+						</h3>
 						<div className="flex items-center space-x-4 text-gray-300">
 							<label htmlFor="preserve" className="flex items-center">
 								<input
@@ -79,8 +76,8 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 									name="aspectRatio"
 									value="preserve"
 									className="mr-2"
-									checked={selectedAspectRatio === "preserve"}
-									onChange={() => setSelectedAspectRatio("preserve")}
+									checked={selectedStyle.ratio === "preserve"}
+									onChange={() => setSelectedStyle({ ...selectedStyle, ratio: "preserve" })}
 								/>
 								Preserve
 							</label>
@@ -91,8 +88,8 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 									name="aspectRatio"
 									value="fit"
 									className="mr-2"
-									checked={selectedAspectRatio === "fit"}
-									onChange={() => setSelectedAspectRatio("fit")}
+									checked={selectedStyle.ratio === "fit"}
+									onChange={() => setSelectedStyle({ ...selectedStyle, ratio: "fit" })}
 								/>
 								1:1 Fit
 							</label>
@@ -103,11 +100,32 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 									name="aspectRatio"
 									value="stretch"
 									className="mr-2"
-									checked={selectedAspectRatio === "stretch"}
-									onChange={() => setSelectedAspectRatio("stretch")}
+									checked={selectedStyle.ratio === "stretch"}
+									onChange={() => setSelectedStyle({ ...selectedStyle, ratio: "stretch" })}
 								/>
 								1:1 Stretch
 							</label>
+						</div>
+					</div>
+					<div className="mb-4">
+						<h3 className="block text-sm font-medium text-gray-300">
+							Image Size (px)
+						</h3>
+						<h4 className="text-gray-400 text-xs font-light mb-2">
+							This will change compression and quality of images added after changing this.<br />Increasing this will lower your capacity.
+						</h4>
+						<div className="relative flex items-center w-fit">
+							<input
+								type="number"
+								min={50}
+								max={500}
+								value={selectedStyle.size}
+								onChange={(e) =>
+									setSelectedStyle({ ...selectedStyle, size: parseInt(e.target.value) })
+								}
+								className="mt-1 p-2 pr-6 w-full border rounded-md focus:ring focus:ring-indigo-300 text-black"
+							/>
+							<span className="absolute right-2 text-gray-400">px</span>
 						</div>
 					</div>
 					<div className="my-4 flex flex-row gap-2">

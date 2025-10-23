@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { SketchPicker } from "react-color";
-import { TierContext } from "../App"
+import { StylingContext, TierContext } from "../App"
 import Image from "./Image"
 
 interface ImageItem {
@@ -10,15 +10,17 @@ interface ImageItem {
 }
 
 interface TierProps {
+	id: number;
 	color: string;
-	name: string;
+	tierLabel: string;
 	onDelete: () => void;
 }
 
-const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
+const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
+	const { style } = useContext(StylingContext);
 
 	const [images, setImages] = useState<ImageItem[]>(() => {
-		const storedImages = localStorage.getItem(`tierImages_${color}_${name}`);
+		const storedImages = localStorage.getItem(`tierImages_${id}`);
 		return storedImages ? JSON.parse(storedImages) : [];
 	});
 
@@ -32,9 +34,9 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
   
 	const contextMenuRef = useRef<HTMLDivElement>(null);
 
-	const tierIndex = tiers.findIndex((tier) => tier.color === color && tier.id === name);
+	const tierIndex = tiers.findIndex((tier) => tier.color === color && tier.tierLabel === tierLabel);
   	const editedColor = tierIndex !== -1 ? tiers[tierIndex].color : color;
-  	const editedName = tierIndex !== -1 ? tiers[tierIndex].id : name;
+  	const editedTierLabel = tierIndex !== -1 ? tiers[tierIndex].tierLabel : tierLabel;
 
 	useEffect(() => {
 		const handleOutsideClick = (e: MouseEvent) => {
@@ -56,10 +58,10 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 
 	useEffect(() => {
 		localStorage.setItem(
-		  `tierImages_${color}_${name}`,
+		  `tierImages_${id}`,
 		  JSON.stringify(images)
 		);
-	  }, [images, color, name]);
+	  }, [images, id]);
 
 	const handleColorChange = (newColor: any) => {
 		if (tierIndex !== -1) {
@@ -68,11 +70,11 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 		  setTiers(updatedTiers);
 		}
 	  };
-	
-	  const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+
+	  const handleTierLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		if (tierIndex !== -1) {
 		  const updatedTiers = [...tiers];
-		  updatedTiers[tierIndex].id = event.target.value;
+		  updatedTiers[tierIndex].tierLabel = event.target.value;
 		  setTiers(updatedTiers);
 		}
 	  };
@@ -92,15 +94,31 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 		handleCloseContextMenu();
 	};
 
+	const calculateContextMenuPosition = () => {
+		// Too lazy to call re-render, so hardcoded since these values won't change, crucify me
+		const menuWidth = contextMenuRef.current?.offsetWidth || 236;
+		const menuHeight = contextMenuRef.current?.offsetHeight || 402;
+		let left = contextMenuPosition.left;
+		let top = contextMenuPosition.top;
+		console.log({ left, top, menuWidth, menuHeight });
+		if (left + menuWidth > window.innerWidth) {
+			left = window.innerWidth - menuWidth - 10;
+		}
+		if (top + menuHeight > window.innerHeight) {
+			top = window.innerHeight - menuHeight - 10;
+		}
+		return { left, top };
+	};
+
 	return (
 		<div className="flex bg-[#1A1A17] gap-[2px]">
 			<div
 				onContextMenu={handleContextMenu}
-				className={`w-24 min-h-[5rem] flex justify-center items-center handle cursor-move`}
-				style={{ backgroundColor: editedColor }}
+				className={`w-24 flex justify-center items-center handle cursor-move`}
+				style={{ backgroundColor: editedColor, minHeight: `${style.size}px`, width: `${style.size*1.2}px`, fontSize: `${style.size/5}px` }}
 			>
 				<p className="text-center" style={{ overflowWrap: "anywhere" }}>
-					{editedName}
+					{editedTierLabel}
 				</p>
 			</div>
 			<ReactSortable
@@ -127,8 +145,7 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 					ref={contextMenuRef}
 					className="fixed bg-zinc-800 text-white p-2 rounded-md shadow-2xl z-10"
 					style={{
-						left: contextMenuPosition.left,
-						top: contextMenuPosition.top
+						...calculateContextMenuPosition(),
 					}}
 					id="context-menu"
 				>
@@ -157,9 +174,10 @@ const Tier: React.FC<TierProps> = ({ color, name, onDelete }) => {
 						</label>
 						<input
 							type="text"
+							placeholder="Tier Label"
 							className="mt-1 p-2 w-full border rounded-md focus:ring focus:ring-indigo-300 text-black"
-							value={editedName}
-							onChange={handleNameChange}
+							value={editedTierLabel}
+							onChange={handleTierLabelChange}
 						/>
 					</div>
 					<div>
