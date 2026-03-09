@@ -3,13 +3,13 @@
 @tailwind utilities;
 
 .preserve{
-    width: auto !important;
+	width: auto !important;
 }
 
 .fit{
-    object-fit: cover;
+	object-fit: cover;
 }
 
 .stretch{
-    object-fit: fill;
+	object-fit: fill;
 }
