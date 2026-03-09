@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import { ReactSortable } from "react-sortablejs";
 import SettingsModal from "./SettingsModal";
 import Image from "./Image";
@@ -30,55 +30,101 @@ const ImageHolder = () => {
 		setIsModalOpen(false);
 	};
 
-	const compressAndDownscaleImage = (base64: string, maxHeight: number, quality: number): Promise<string> => {
-		return new Promise((resolve) => {
-			const img = document.createElement("img");
-          	img.src = base64;
-          	img.onload = function () {
-				const canvas = document.createElement("canvas");
-				const ctx = canvas.getContext("2d");
-				const scale = maxHeight / img.height;
-				canvas.width = img.width * scale;
-				canvas.height = maxHeight;
-				ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-				const compressedImageData = canvas.toDataURL("image/jpeg", quality);
-				resolve(compressedImageData);
-		  	};
-		});
-	  };
+	const compressAndDownscaleImage = useCallback(
+		(base64: string, maxHeight: number, quality: number): Promise<string> => {
+			return new Promise((resolve) => {
+				const img = document.createElement("img");
+				img.src = base64;
+				img.onload = function () {
+					const canvas = document.createElement("canvas");
+					const ctx = canvas.getContext("2d");
+					const scale = maxHeight / img.height;
+					canvas.width = img.width * scale;
+					canvas.height = maxHeight;
+					ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+					const compressedImageData = canvas.toDataURL("image/jpeg", quality);
+					resolve(compressedImageData);
+				};
+			});
+		},
+		[]
+	);
 
-	const handleDrop = (event: DragEvent) => {
-		event.preventDefault();
-		if (event.dataTransfer == null) return;
-		if (event.dataTransfer.getData("application/x-tier") !== "true") {
-			if (event.dataTransfer.files.length > 0) {
-				const time = new Date().getTime();
-				const files = Array.from(event.dataTransfer.files);
-				files.forEach((file, index) => {
-					if (!file.type.startsWith("image/")) return;
-					const reader = new FileReader();
-					reader.onload = async function (event) {
-						if (event.target == null) return;
-						const imageData = event.target.result;
-						const compressedImageData = await compressAndDownscaleImage(imageData as string, style.size, 1);
-						setImages((prevImages) => [
-							...prevImages,
-							{
-								id: time + index,
-								url: compressedImageData as string
-							}
-						]);
-					};
-					reader.readAsDataURL(file);
-				});
+	const handleDrop = useCallback(
+		(event: DragEvent) => {
+			event.preventDefault();
+			if (event.dataTransfer == null) return;
+
+			if (event.dataTransfer.getData("application/x-tier") !== "true") {
+				if (event.dataTransfer.files.length > 0) {
+					const time = new Date().getTime();
+					const files = Array.from(event.dataTransfer.files);
+
+					files.forEach((file, index) => {
+						if (!file.type.startsWith("image/")) return;
+
+						const reader = new FileReader();
+						reader.onload = async function (event) {
+							if (event.target == null) return;
+							const imageData = event.target.result;
+							const compressedImageData = await compressAndDownscaleImage(
+								imageData as string,
+								style.size,
+								1
+							);
+
+							setImages((prevImages) => [
+								...prevImages,
+								{
+									id: time + index,
+									url: compressedImageData as string
+								}
+							]);
+						};
+						reader.readAsDataURL(file);
+					});
+				}
 			}
-		}
-	};
+		},
+		[compressAndDownscaleImage, style.size]
+	);
 
-	const dragStart = (event: DragEvent) => {
+	const dragStart = useCallback((event: DragEvent) => {
 		if (event.dataTransfer == null) return;
 		event.dataTransfer.setData("application/x-tier", "true");
-	};
+	}, []);
+
+	const handlePaste = useCallback(
+		(event: ClipboardEvent) => {
+			const items = event.clipboardData?.items;
+			if (!items) return;
+
+			const time = new Date().getTime();
+			for (let i = 0; i < items.length; i++) {
+				const item = items[i];
+				if (item.type.indexOf("image") === -1) continue;
+
+				const blob = item.getAsFile();
+				const reader = new FileReader();
+				reader.readAsDataURL(blob || new Blob());
+
+				reader.onloadend = async function () {
+					const base64data = reader.result;
+					const compressedImageData = await compressAndDownscaleImage(
+						base64data as string,
+						style.size,
+						1
+					);
+
+					setImages((prevImages) => [
+						...prevImages,
+						{ id: time + i, url: compressedImageData }
+					]);
+				};
+			}
+		},
+		[compressAndDownscaleImage, style.size]
+	);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -94,31 +140,12 @@ const ImageHolder = () => {
 
 		loadImages();
 
-		const handlePaste = (event: ClipboardEvent) => {
-			const items = event.clipboardData?.items;
-			if (items) {
-				const time = new Date().getTime();
-				for (let i = 0; i < items.length; i++) {
-					const item = items[i];
-					if (item.type.indexOf("image") !== -1) {
-						const blob = item.getAsFile();
-						let reader = new FileReader();
-						reader.readAsDataURL(blob || new Blob()); 
-						reader.onloadend = async function() {
-							let base64data : any = reader.result;
-							const compressedImageData = await compressAndDownscaleImage(base64data as string, style.size, 1);
-							setImages((prevImages) => [
-								...prevImages,
-								{ id: time + i, url: compressedImageData }
-							]);
-						}
-					}
-				}
-			}
+		return () => {
+			isMounted = false;
 		};
+	}, []);
 
-		document.addEventListener("paste", handlePaste);
-
+	useEffect(() => {
 		const dragOver = (event: DragEvent) => {
 			event.preventDefault();
 		};
@@ -128,17 +155,18 @@ const ImageHolder = () => {
 			handleDrop(event);
 		};
 
+		document.addEventListener("paste", handlePaste);
 		document.addEventListener("dragstart", dragStart);
 		document.addEventListener("dragover", dragOver);
 		document.addEventListener("drop", drop);
 
 		return () => {
-			isMounted = false;
 			document.removeEventListener("paste", handlePaste);
+			document.removeEventListener("dragstart", dragStart);
 			document.removeEventListener("dragover", dragOver);
 			document.removeEventListener("drop", drop);
 		};
-	}, [style.size]);
+	}, [handlePaste, dragStart, handleDrop]);
 
 	useEffect(() => {
 		if (!hasHydratedImages) {
