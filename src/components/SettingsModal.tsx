@@ -15,7 +15,7 @@ interface ModalProps {
 }
 
 const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
-    const { style, setStyle } = useContext(StylingContext);
+	const { style, setStyle } = useContext(StylingContext);
 	const [selectedStyle, setSelectedStyle] = useState(style);
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -38,18 +38,18 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 		window.location.reload();
 	};
 
-    const handleCopyImage = async () => {
-        const node = document.getElementById('tierlist');
-        if (node) {
-            try {
-                const blob = await toBlob(node);
-                const item = new ClipboardItem({ "image/png": blob as Blob });
-                await navigator.clipboard.write([item]);
-            } catch (error) {
-                console.error('Failed to copy image: ', error);
-            }
-        }
-    };
+	const handleCopyImage = async () => {
+		const node = document.getElementById('tierlist');
+		if (node) {
+			try {
+				const blob = await toBlob(node);
+				const item = new ClipboardItem({ "image/png": blob as Blob });
+				await navigator.clipboard.write([item]);
+			} catch (error) {
+				console.error('Failed to copy image: ', error);
+			}
+		}
+	};
 
 	if (!isOpen) {
 		return null;
@@ -114,7 +114,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 							Image Size (px)
 						</h3>
 						<h4 className="text-gray-400 text-xs font-light mb-2">
-							This will change compression and quality of images added after changing this.<br />Increasing this will lower your capacity.
+							This will change the size of all images on the site and can influence the image scaling setting
 						</h4>
 						<div className="relative flex items-center w-fit">
 							<input
@@ -130,6 +130,62 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 							<span className="absolute right-2 text-gray-400">px</span>
 						</div>
 					</div>
+					<div className="mb-4">
+						<h3 className="block text-sm font-medium text-gray-300">
+							Compression Quality
+						</h3>
+						<h4 className="text-gray-400 text-xs font-light mb-2">
+							100% means no compression.<br />Lowering this will lower storage on your computer but also reduce image quality.
+						</h4>
+						<div className="flex items-center gap-3">
+							<input
+								type="range"
+								min={1}
+								max={100}
+								value={selectedStyle.quality}
+								onChange={(e) =>
+									setSelectedStyle({ ...selectedStyle, quality: parseInt(e.target.value, 10) })
+								}
+								className="w-48"
+							/>
+							<span className="text-gray-300 min-w-[3rem]">{selectedStyle.quality}%</span>
+						</div>
+					</div>
+					<div className="mb-4">
+						<h3 className="block text-sm font-medium text-gray-300">
+							Image Scaling
+						</h3>
+						<div className="flex flex-col gap-1 text-gray-300">
+							<label htmlFor="scale-preserve" className="flex items-center">
+								<input
+									type="radio"
+									id="scale-preserve"
+									name="pasteScaleMode"
+									value="preserve"
+									className="mr-2"
+									checked={selectedStyle.pasteScaleMode === "preserve"}
+									onChange={() =>
+										setSelectedStyle({ ...selectedStyle, pasteScaleMode: "preserve" })
+									}
+								/>
+								Preserve original resolution
+							</label>
+							<label htmlFor="scale-fixed" className="flex items-center">
+								<input
+									type="radio"
+									id="scale-fixed"
+									name="pasteScaleMode"
+									value="fixed"
+									className="mr-2"
+									checked={selectedStyle.pasteScaleMode === "fixed"}
+									onChange={() =>
+										setSelectedStyle({ ...selectedStyle, pasteScaleMode: "fixed" })
+									}
+								/>
+								Scale to current image size setting
+							</label>
+						</div>
+					</div>
 					<div className="my-4 flex flex-row gap-2">
 						<button
 							type="button"
@@ -139,12 +195,12 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 							Clear Local Storage
 						</button>
 						<button
-                            type="button"
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                            onClick={handleCopyImage}
-                        >
-                            Copy Image
-                        </button>
+							type="button"
+							className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+							onClick={handleCopyImage}
+						>
+							Copy Image
+						</button>
 					</div>
 					<div className="flex justify-end">
 						<button

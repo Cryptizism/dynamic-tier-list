@@ -6,101 +6,128 @@ import { AddTierButton } from "./components/TierModal";
 import { migrateImageStoresFromLocalStorage } from "./utils/imageStore";
 
 interface Style {
-  ratio: string;
-  size: number;
+	ratio: string;
+	size: number;
+	quality: number;
+	pasteScaleMode: "fixed" | "preserve";
 }
 
 interface StyleState {
-  style: Style;
-  setStyle: React.Dispatch<React.SetStateAction<Style>>;
+	style: Style;
+	setStyle: React.Dispatch<React.SetStateAction<Style>>;
 }
 
 interface Tier {
-  id: number;
-  color: string;
-  tierLabel: string;
+	id: number;
+	color: string;
+	tierLabel: string;
 }
 
 interface TierState {
-  tiers: Tier[];
-  setTiers: React.Dispatch<React.SetStateAction<Tier[]>>;
+	tiers: Tier[];
+	setTiers: React.Dispatch<React.SetStateAction<Tier[]>>;
 }
 
 export const StylingContext = React.createContext<StyleState>({} as StyleState);
 export const TierContext = React.createContext<TierState>({} as TierState);
 
 const App = () => {
-  const [style, setStyle] = useState<Style>(() => {
-    const storedStyle = localStorage.getItem("style");
-    if (storedStyle) {
-      if (storedStyle.startsWith("{")) {
-        return JSON.parse(storedStyle);
-      } else {
-        // MIGRATION: OLD STYLE FORMAT
-        const ratio = storedStyle;
-        return { ratio: ratio, size: 80 };
-      }
-    } else {
-      return { ratio: "preserve", size: 80 };
-    }
-  });
-  const [tiers, setTiers] = useState<Tier[]>(() => {
-    const storedTiers = localStorage.getItem("tiers");
+	const normalizeStyle = (value: unknown): Style => {
+		const fallback: Style = {
+			ratio: "preserve",
+			size: 80,
+			quality: 100,
+			pasteScaleMode: "preserve",
+		};
 
-    if (storedTiers) {
-      const parsedTiers: any[] = JSON.parse(storedTiers);
+		if (typeof value !== "object" || value === null) {
+			return fallback;
+		}
 
-      // MIGRATION: ID USED TO REPRESENT TIER LABEL
-      // IDENTIFIER USED COMBINATION OF COLOR AND LABEL
-      // WE WILL MIMIC THE OLD BEHAVIOR FOR OLDER SAVES (OLD SAVES USE THIS FOR IMAGE LOOKUP)
-      // FUTURE SAVES WILL USE NEW FORMAT OF DATE.NOW()
-      // this is my first time writing migration code and writing comments about it :3
-      // if you see this DM me I'm convinced nobody will ever read this
-      const isOldFormat = parsedTiers.some((tier) => !("tierLabel" in tier));
-      if (isOldFormat) {
-        return parsedTiers.map((tier, index) => ({
-          color: tier.color,
-          tierLabel: tier.id,
-          id: `${tier.color}_${tier.id}`,
-        }));
-      } else {
-        return parsedTiers;
-      }
-    }
+		const styleValue = value as Partial<Style>;
 
-    return [
-      { color: "#FF7F7F", tierLabel: "S", id: 1 },
-      { color: "#FFBF7F", tierLabel: "A", id: 2 },
-      { color: "#FFDF80", tierLabel: "B", id: 3 },
-      { color: "#FFFF7F", tierLabel: "C", id: 4 },
-      { color: "#BFFF7F", tierLabel: "D", id: 5 },
-    ];
-  });
+		return {
+			ratio: typeof styleValue.ratio === "string" ? styleValue.ratio : fallback.ratio,
+			size: typeof styleValue.size === "number" ? styleValue.size : fallback.size,
+			quality: typeof styleValue.quality === "number" ? styleValue.quality : fallback.quality,
+			pasteScaleMode:
+				styleValue.pasteScaleMode === "preserve" || styleValue.pasteScaleMode === "fixed"
+					? styleValue.pasteScaleMode
+					: fallback.pasteScaleMode,
+		};
+	};
 
-  useEffect(() => {
-    localStorage.setItem("tiers", JSON.stringify(tiers));
-  }, [tiers]);
+	const [style, setStyle] = useState<Style>(() => {
+		const storedStyle = localStorage.getItem("style");
+		if (storedStyle) {
+			if (storedStyle.startsWith("{")) {
+				return normalizeStyle(JSON.parse(storedStyle));
+			} else {
+				// MIGRATION: OLD STYLE FORMAT
+				const ratio = storedStyle;
+				return { ratio: ratio, size: 80, quality: 100, pasteScaleMode: "preserve" };
+			}
+		} else {
+			return { ratio: "preserve", size: 80, quality: 100, pasteScaleMode: "preserve" };
+		}
+	});
+	const [tiers, setTiers] = useState<Tier[]>(() => {
+		const storedTiers = localStorage.getItem("tiers");
 
-  useEffect(() => {
-    localStorage.setItem("style", JSON.stringify(style));
-  }, [style]);
+		if (storedTiers) {
+			const parsedTiers: any[] = JSON.parse(storedTiers);
 
-  useEffect(() => {
-    // Also migrates image stores from localStorage to IndexedDB
-    migrateImageStoresFromLocalStorage();
-  }, []);
+			// MIGRATION: ID USED TO REPRESENT TIER LABEL
+			// IDENTIFIER USED COMBINATION OF COLOR AND LABEL
+			// WE WILL MIMIC THE OLD BEHAVIOR FOR OLDER SAVES (OLD SAVES USE THIS FOR IMAGE LOOKUP)
+			// FUTURE SAVES WILL USE NEW FORMAT OF DATE.NOW()
+			// this is my first time writing migration code and writing comments about it :3
+			// if you see this DM me I'm convinced nobody will ever read this
+			const isOldFormat = parsedTiers.some((tier) => !("tierLabel" in tier));
+			if (isOldFormat) {
+				return parsedTiers.map((tier, index) => ({
+					color: tier.color,
+					tierLabel: tier.id,
+					id: `${tier.color}_${tier.id}`,
+				}));
+			} else {
+				return parsedTiers;
+			}
+		}
 
-  return (
-    <div className="p-8 min-h-[100vh] bg-stone-800">
-      <StylingContext.Provider value={{ style, setStyle }}>
-        <TierContext.Provider value={{ tiers, setTiers }}>
-          <TierList />
-          <AddTierButton />
-        </TierContext.Provider>
-        <ImageHolder />
-      </StylingContext.Provider>
-    </div>
-  );
+		return [
+			{ color: "#FF7F7F", tierLabel: "S", id: 1 },
+			{ color: "#FFBF7F", tierLabel: "A", id: 2 },
+			{ color: "#FFDF80", tierLabel: "B", id: 3 },
+			{ color: "#FFFF7F", tierLabel: "C", id: 4 },
+			{ color: "#BFFF7F", tierLabel: "D", id: 5 },
+		];
+	});
+
+	useEffect(() => {
+		localStorage.setItem("tiers", JSON.stringify(tiers));
+	}, [tiers]);
+
+	useEffect(() => {
+		localStorage.setItem("style", JSON.stringify(style));
+	}, [style]);
+
+	useEffect(() => {
+		// Also migrates image stores from localStorage to IndexedDB
+		migrateImageStoresFromLocalStorage();
+	}, []);
+
+	return (
+		<div className="p-8 min-h-[100vh] bg-stone-800">
+			<StylingContext.Provider value={{ style, setStyle }}>
+				<TierContext.Provider value={{ tiers, setTiers }}>
+					<TierList />
+					<AddTierButton />
+				</TierContext.Provider>
+				<ImageHolder />
+			</StylingContext.Provider>
+		</div>
+	);
 };
 
 export default App;

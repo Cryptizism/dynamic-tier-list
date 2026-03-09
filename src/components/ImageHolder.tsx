@@ -31,18 +31,27 @@ const ImageHolder = () => {
 	};
 
 	const compressAndDownscaleImage = useCallback(
-		(base64: string, maxHeight: number, quality: number): Promise<string> => {
+		(base64: string, maxHeight: number, qualityPercent: number, shouldScale: boolean): Promise<string> => {
+			if (qualityPercent >= 100) {
+				return Promise.resolve(base64);
+			}
+
 			return new Promise((resolve) => {
 				const img = document.createElement("img");
 				img.src = base64;
 				img.onload = function () {
 					const canvas = document.createElement("canvas");
 					const ctx = canvas.getContext("2d");
-					const scale = maxHeight / img.height;
-					canvas.width = img.width * scale;
-					canvas.height = maxHeight;
+					if (shouldScale) {
+						const scale = maxHeight / img.height;
+						canvas.width = img.width * scale;
+						canvas.height = maxHeight;
+					} else {
+						canvas.width = img.width;
+						canvas.height = img.height;
+					}
 					ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-					const compressedImageData = canvas.toDataURL("image/jpeg", quality);
+					const compressedImageData = canvas.toDataURL("image/jpeg", qualityPercent / 100);
 					resolve(compressedImageData);
 				};
 			});
@@ -67,10 +76,12 @@ const ImageHolder = () => {
 						reader.onload = async function (event) {
 							if (event.target == null) return;
 							const imageData = event.target.result;
+							const shouldScale = style.pasteScaleMode === "fixed";
 							const compressedImageData = await compressAndDownscaleImage(
 								imageData as string,
 								style.size,
-								1
+								style.quality,
+								shouldScale
 							);
 
 							setImages((prevImages) => [
@@ -86,7 +97,7 @@ const ImageHolder = () => {
 				}
 			}
 		},
-		[compressAndDownscaleImage, style.size]
+		[compressAndDownscaleImage, style.pasteScaleMode, style.quality, style.size]
 	);
 
 	const dragStart = useCallback((event: DragEvent) => {
@@ -110,10 +121,12 @@ const ImageHolder = () => {
 
 				reader.onloadend = async function () {
 					const base64data = reader.result;
+					const shouldScale = style.pasteScaleMode === "fixed";
 					const compressedImageData = await compressAndDownscaleImage(
 						base64data as string,
 						style.size,
-						1
+						style.quality,
+						shouldScale
 					);
 
 					setImages((prevImages) => [
@@ -123,7 +136,7 @@ const ImageHolder = () => {
 				};
 			}
 		},
-		[compressAndDownscaleImage, style.size]
+		[compressAndDownscaleImage, style.pasteScaleMode, style.quality, style.size]
 	);
 
 	useEffect(() => {
