@@ -3,6 +3,11 @@ import { ReactSortable } from "react-sortablejs";
 import SettingsModal from "./SettingsModal";
 import Image from "./Image";
 import { StylingContext } from "../App";
+import {
+	getImageStore,
+	migrateImageStoresFromLocalStorage,
+	setImageStore
+} from "../utils/imageStore";
 
 interface ImageItem {
 	id: number;
@@ -12,10 +17,8 @@ interface ImageItem {
 const ImageHolder = () => {
 	const { style } = useContext(StylingContext);
 
-	const [images, setImages] = useState<ImageItem[]>(() => {
-		const storedImages = localStorage.getItem("imageHolder");
-		return storedImages ? JSON.parse(storedImages) : [];
-	});
+	const [images, setImages] = useState<ImageItem[]>([]);
+	const [hasHydratedImages, setHasHydratedImages] = useState(false);
 
 	const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -78,6 +81,19 @@ const ImageHolder = () => {
 	};
 
 	useEffect(() => {
+		let isMounted = true;
+
+		const loadImages = async () => {
+			await migrateImageStoresFromLocalStorage();
+			const storedImages = await getImageStore("imageHolder");
+			if (isMounted) {
+				setImages(storedImages);
+				setHasHydratedImages(true);
+			}
+		};
+
+		loadImages();
+
 		const handlePaste = (event: ClipboardEvent) => {
 			const items = event.clipboardData?.items;
 			if (items) {
@@ -117,6 +133,7 @@ const ImageHolder = () => {
 		document.addEventListener("drop", drop);
 
 		return () => {
+			isMounted = false;
 			document.removeEventListener("paste", handlePaste);
 			document.removeEventListener("dragover", dragOver);
 			document.removeEventListener("drop", drop);
@@ -124,13 +141,21 @@ const ImageHolder = () => {
 	}, [style.size]);
 
 	useEffect(() => {
-		try{
-			localStorage.setItem("imageHolder", JSON.stringify(images));
-		} catch (error) {
-			window.alert("Local storage is full :( You can try deleting some images or clearing local storage in settings. Consider reducting image sizes.");
-			console.error("Failed to save images to localStorage:", error);
+		if (!hasHydratedImages) {
+			return;
 		}
-	}, [images]);
+
+		const persistImages = async () => {
+			try {
+				await setImageStore("imageHolder", images);
+			} catch (error) {
+				window.alert("Failed to save images locally. You can try deleting some images or clearing local storage in settings.");
+				console.error("Failed to save images to IndexedDB:", error);
+			}
+		};
+
+		persistImages();
+	}, [images, hasHydratedImages]);
 
 	return (
 		<div className="bg-stone-700 flex">

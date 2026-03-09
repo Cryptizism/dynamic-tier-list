@@ -1,6 +1,7 @@
 import React, { FormEvent, useContext, useState } from "react";
 import { StylingContext } from "../App";
 import { toBlob } from 'html-to-image';
+import { clearAllImageStores } from "../utils/imageStore";
 
 interface ImageItem {
 	id: number;
@@ -30,8 +31,9 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 		if (target.id === "modal-bg") onClose();
 	};
 
-	const handleClearLocalStorage = () => {
+	const handleClearLocalStorage = async () => {
 		localStorage.clear();
+		await clearAllImageStores();
 		onClose();
 		window.location.reload();
 	};

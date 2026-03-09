@@ -3,6 +3,11 @@ import { ReactSortable } from "react-sortablejs";
 import { SketchPicker } from "react-color";
 import { StylingContext, TierContext } from "../App"
 import Image from "./Image"
+import {
+	getImageStore,
+	migrateImageStoresFromLocalStorage,
+	setImageStore
+} from "../utils/imageStore";
 
 interface ImageItem {
 	id: number;
@@ -19,10 +24,8 @@ interface TierProps {
 const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 	const { style } = useContext(StylingContext);
 
-	const [images, setImages] = useState<ImageItem[]>(() => {
-		const storedImages = localStorage.getItem(`tierImages_${id}`);
-		return storedImages ? JSON.parse(storedImages) : [];
-	});
+	const [images, setImages] = useState<ImageItem[]>([]);
+	const [hasHydratedImages, setHasHydratedImages] = useState(false);
 
 	const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 	const [contextMenuPosition, setContextMenuPosition] = useState({
@@ -57,11 +60,35 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 	}, [isContextMenuOpen]);
 
 	useEffect(() => {
-		localStorage.setItem(
-		  `tierImages_${id}`,
-		  JSON.stringify(images)
-		);
-	  }, [images, id]);
+		let isMounted = true;
+
+		const loadImages = async () => {
+			await migrateImageStoresFromLocalStorage();
+			const storedImages = await getImageStore(`tierImages_${id}`);
+			if (isMounted) {
+				setImages(storedImages);
+				setHasHydratedImages(true);
+			}
+		};
+
+		loadImages();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [id]);
+
+	useEffect(() => {
+		if (!hasHydratedImages) {
+			return;
+		}
+
+		const persistImages = async () => {
+			await setImageStore(`tierImages_${id}`, images);
+		};
+
+		persistImages();
+	}, [images, id, hasHydratedImages]);
 
 	const handleColorChange = (newColor: any) => {
 		if (tierIndex !== -1) {

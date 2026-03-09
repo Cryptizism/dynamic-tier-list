@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import './index.css';
-import TierList from './components/TierList';
-import ImageHolder from './components/ImageHolder';
+import "./index.css";
+import TierList from "./components/TierList";
+import ImageHolder from "./components/ImageHolder";
 import { AddTierButton } from "./components/TierModal";
+import { migrateImageStoresFromLocalStorage } from "./utils/imageStore";
 
 interface Style {
   ratio: string;
@@ -55,12 +56,12 @@ const App = () => {
       // FUTURE SAVES WILL USE NEW FORMAT OF DATE.NOW()
       // this is my first time writing migration code and writing comments about it :3
       // if you see this DM me I'm convinced nobody will ever read this
-      const isOldFormat = parsedTiers.some(tier => !('tierLabel' in tier));
+      const isOldFormat = parsedTiers.some((tier) => !("tierLabel" in tier));
       if (isOldFormat) {
         return parsedTiers.map((tier, index) => ({
           color: tier.color,
           tierLabel: tier.id,
-          id: `${tier.color}_${tier.id}`
+          id: `${tier.color}_${tier.id}`,
         }));
       } else {
         return parsedTiers;
@@ -72,7 +73,7 @@ const App = () => {
       { color: "#FFBF7F", tierLabel: "A", id: 2 },
       { color: "#FFDF80", tierLabel: "B", id: 3 },
       { color: "#FFFF7F", tierLabel: "C", id: 4 },
-      { color: "#BFFF7F", tierLabel: "D", id: 5 }
+      { color: "#BFFF7F", tierLabel: "D", id: 5 },
     ];
   });
 
@@ -83,6 +84,11 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem("style", JSON.stringify(style));
   }, [style]);
+
+  useEffect(() => {
+    // Also migrates image stores from localStorage to IndexedDB
+    migrateImageStoresFromLocalStorage();
+  }, []);
 
   return (
     <div className="p-8 min-h-[100vh] bg-stone-800">
