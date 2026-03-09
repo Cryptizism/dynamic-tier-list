@@ -29,17 +29,17 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 
 	const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 	const [contextMenuPosition, setContextMenuPosition] = useState({
-	  left: 0,
-	  top: 0
+		left: 0,
+		top: 0
 	});
 
 	const { tiers, setTiers } = useContext(TierContext) || {};
-  
+	
 	const contextMenuRef = useRef<HTMLDivElement>(null);
 
 	const tierIndex = tiers.findIndex((tier) => tier.color === color && tier.tierLabel === tierLabel);
-  	const editedColor = tierIndex !== -1 ? tiers[tierIndex].color : color;
-  	const editedTierLabel = tierIndex !== -1 ? tiers[tierIndex].tierLabel : tierLabel;
+	const editedColor = tierIndex !== -1 ? tiers[tierIndex].color : color;
+	const editedTierLabel = tierIndex !== -1 ? tiers[tierIndex].tierLabel : tierLabel;
 
 	useEffect(() => {
 		const handleOutsideClick = (e: MouseEvent) => {
@@ -92,19 +92,19 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 
 	const handleColorChange = (newColor: any) => {
 		if (tierIndex !== -1) {
-		  const updatedTiers = [...tiers];
-		  updatedTiers[tierIndex].color = newColor.hex;
-		  setTiers(updatedTiers);
+			const updatedTiers = [...tiers];
+			updatedTiers[tierIndex].color = newColor.hex;
+			setTiers(updatedTiers);
 		}
-	  };
+	};
 
-	  const handleTierLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const handleTierLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		if (tierIndex !== -1) {
-		  const updatedTiers = [...tiers];
-		  updatedTiers[tierIndex].tierLabel = event.target.value;
-		  setTiers(updatedTiers);
+			const updatedTiers = [...tiers];
+			updatedTiers[tierIndex].tierLabel = event.target.value;
+			setTiers(updatedTiers);
 		}
-	  };
+	};
 
 	const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
 		e.preventDefault();
@@ -157,12 +157,12 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 			>
 				{images.map((image) => (
 					<Image
-					key={image.id}
-					imageUrl={image.url}
-					onDelete={() => {
-						const updatedImages = images.filter((img) => img.id !== image.id);
-						setImages(updatedImages);
-					}}
+						key={image.id}
+						imageUrl={image.url}
+						onDelete={() => {
+							const updatedImages = images.filter((img) => img.id !== image.id);
+							setImages(updatedImages);
+						}}
 					/>
 				))}
 			</ReactSortable>

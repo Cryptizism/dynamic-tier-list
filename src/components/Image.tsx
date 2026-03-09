@@ -27,7 +27,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={handleMouseLeave}
 		>
-			<img src={imageUrl} className={style.ratio} style={{height: `${style.size}px`, width: `${style.size}px`}} />
+			<img src={imageUrl} className={style.ratio} style={{height: `${style.size}px`, width: `${style.size}px`}} alt="" />
 			{isHovered && (
 				<div
 					className="absolute top-0 right-0 p-1 cursor-pointer text-red-500"
