@@ -12,6 +12,7 @@ import {
 interface ImageItem {
 	id: number;
 	url: string;
+	text?: string;
 }
 
 const ImageHolder = () => {
@@ -88,7 +89,8 @@ const ImageHolder = () => {
 								...prevImages,
 								{
 									id: time + index,
-									url: compressedImageData as string
+									url: compressedImageData as string,
+									text: ""
 								}
 							]);
 						};
@@ -131,7 +133,7 @@ const ImageHolder = () => {
 
 					setImages((prevImages) => [
 						...prevImages,
-						{ id: time + i, url: compressedImageData }
+						{ id: time + i, url: compressedImageData, text: "" }
 					]);
 				};
 			}
@@ -222,11 +224,19 @@ const ImageHolder = () => {
 						<Image
 							key={image.id}
 							imageUrl={image.url}
+							imageText={image.text}
 							onDelete={() => {
 								const updatedImages = images.filter(
 									(img) => img.id !== image.id
 								);
 								setImages(updatedImages);
+							}}
+							onEditText={(nextText) => {
+								setImages((prevImages) =>
+									prevImages.map((img) =>
+										img.id === image.id ? { ...img, text: nextText } : img
+									)
+								);
 							}}
 						/>
 					))

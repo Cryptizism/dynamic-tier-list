@@ -12,6 +12,7 @@ import {
 interface ImageItem {
 	id: number;
 	url: string;
+	text?: string;
 }
 
 interface TierProps {
@@ -123,6 +124,7 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 
 	const calculateContextMenuPosition = () => {
 		// Too lazy to call re-render, so hardcoded since these values won't change, crucify me
+		// Lol what the fuck is this guy above me talking avbout
 		const menuWidth = contextMenuRef.current?.offsetWidth || 236;
 		const menuHeight = contextMenuRef.current?.offsetHeight || 402;
 		let left = contextMenuPosition.left;
@@ -159,9 +161,17 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 					<Image
 						key={image.id}
 						imageUrl={image.url}
+						imageText={image.text}
 						onDelete={() => {
 							const updatedImages = images.filter((img) => img.id !== image.id);
 							setImages(updatedImages);
+						}}
+						onEditText={(nextText) => {
+							setImages((prevImages) =>
+								prevImages.map((img) =>
+									img.id === image.id ? { ...img, text: nextText } : img
+								)
+							);
 						}}
 					/>
 				))}
