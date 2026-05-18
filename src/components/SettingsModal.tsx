@@ -17,6 +17,28 @@ interface ModalProps {
 const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 	const { style, setStyle } = useContext(StylingContext);
 	const [selectedStyle, setSelectedStyle] = useState(style);
+	const [isCopying, setIsCopying] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
+
+	const waitForPaint = () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))); // Without setTimeout it doesn't work? LAME ASS CODE
+
+	const exportOptions = {
+		pixelRatio: 1,
+		skipFonts: true,
+		cacheBust: false,
+		skipAutoScale: true
+	};
+
+	const getTierListNode = () => document.getElementById("tierlist");
+
+	const renderTierListToBlob = async () => {
+		const node = getTierListNode();
+		if (!node) {
+			return null;
+		}
+
+		return toBlob(node, exportOptions);
+	};
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -39,15 +61,42 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 	};
 
 	const handleCopyImage = async () => {
-		const node = document.getElementById('tierlist');
-		if (node) {
-			try {
-				const blob = await toBlob(node);
-				const item = new ClipboardItem({ "image/png": blob as Blob });
+		if (isCopying || isSaving) return;
+		setIsCopying(true);
+		try {
+			await waitForPaint();
+			const blob = await renderTierListToBlob();
+			if (blob) {
+				const item = new ClipboardItem({ "image/png": blob });
 				await navigator.clipboard.write([item]);
-			} catch (error) {
-				console.error('Failed to copy image: ', error);
 			}
+		} catch (error) {
+			console.error('Failed to copy image: ', error);
+		} finally {
+			setIsCopying(false);
+		}
+	};
+
+	const handleSaveImage = async () => {
+		if (isCopying || isSaving) return;
+		setIsSaving(true);
+		try {
+			await waitForPaint();
+			const blob = await renderTierListToBlob();
+			if (blob) {
+				const url = URL.createObjectURL(blob);
+				const link = document.createElement('a');
+				link.href = url;
+				link.download = 'tierlist.png';
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				URL.revokeObjectURL(url);
+			}
+		} catch (error) {
+			console.error('Failed to save image: ', error);
+		} finally {
+			setIsSaving(false);
 		}
 	};
 
@@ -196,10 +245,19 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 						</button>
 						<button
 							type="button"
-							className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+							disabled={isCopying || isSaving}
+							className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
 							onClick={handleCopyImage}
 						>
-							Copy Image
+							{isCopying ? "Copying..." : "Copy Image"}
+						</button>
+						<button
+							type="button"
+							disabled={isCopying || isSaving}
+							className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
+							onClick={handleSaveImage}
+						>
+							{isSaving ? "Saving..." : "Save Image"}
 						</button>
 					</div>
 					<div className="flex justify-end">
