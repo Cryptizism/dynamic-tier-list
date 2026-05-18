@@ -6,6 +6,7 @@ import Image from "./Image"
 import {
 	getImageStore,
 	migrateImageStoresFromLocalStorage,
+	deleteOriginalImageData,
 	setImageStore
 } from "../utils/imageStore";
 
@@ -118,6 +119,9 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 	};
 
 	const handleDeleteImage = useCallback((imageId: number) => {
+		deleteOriginalImageData(imageId).catch((error) => {
+			console.error("Failed to delete original image data:", error);
+		});
 		setImages((prevImages) => prevImages.filter((img) => img.id !== imageId));
 	}, []);
 
@@ -127,7 +131,10 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 		);
 	}, []);
 
-	const handleDeleteTier = () => {
+	const handleDeleteTier = async () => {
+		await Promise.all(images.map((image) => deleteOriginalImageData(image.id).catch((error) => {
+			console.error("Failed to delete original image data:", error);
+		})));
 		onDelete();
 		handleCloseContextMenu();
 	};

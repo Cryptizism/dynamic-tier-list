@@ -6,7 +6,9 @@ import { StylingContext } from "../App";
 import {
 	getImageStore,
 	migrateImageStoresFromLocalStorage,
-	setImageStore
+	deleteOriginalImageData,
+	setOriginalImageData,
+	setImageStore,
 } from "../utils/imageStore";
 
 interface ImageItem {
@@ -20,7 +22,6 @@ const ImageHolder = () => {
 
 	const [images, setImages] = useState<ImageItem[]>([]);
 	const [hasHydratedImages, setHasHydratedImages] = useState(false);
-
 	const [isModalOpen, setIsModalOpen] = useState(false);
 
 	const openModal = () => {
@@ -33,24 +34,15 @@ const ImageHolder = () => {
 
 	const compressAndDownscaleImage = useCallback(
 		(base64: string, maxHeight: number, qualityPercent: number, shouldScale: boolean): Promise<string> => {
-			if (qualityPercent >= 100) {
-				return Promise.resolve(base64);
-			}
-
 			return new Promise((resolve) => {
 				const img = document.createElement("img");
 				img.src = base64;
 				img.onload = function () {
 					const canvas = document.createElement("canvas");
 					const ctx = canvas.getContext("2d");
-					if (shouldScale) {
-						const scale = maxHeight / img.height;
-						canvas.width = img.width * scale;
-						canvas.height = maxHeight;
-					} else {
-						canvas.width = img.width;
-						canvas.height = img.height;
-					}
+					const scale = shouldScale ? maxHeight / img.height : Math.min(1, maxHeight / img.height);
+					canvas.width = img.width * scale;
+					canvas.height = img.height * scale;
 					ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
 					const compressedImageData = canvas.toDataURL("image/jpeg", qualityPercent / 100);
 					resolve(compressedImageData);
@@ -60,6 +52,30 @@ const ImageHolder = () => {
 		[]
 	);
 
+	const storeImportedImage = useCallback(
+		async (imageId: number, originalDataUrl: string) => {
+			try {
+				await setOriginalImageData({ id: imageId, url: originalDataUrl });
+			} catch (error) {
+				console.error("Failed to save original image data:", error);
+			}
+
+			const shouldScale = style.pasteScaleMode === "fixed";
+			const previewImageData = await compressAndDownscaleImage(
+				originalDataUrl,
+				style.size,
+				style.quality,
+				shouldScale
+			);
+
+			setImages((prevImages) => [
+				...prevImages,
+				{ id: imageId, url: previewImageData, text: "" }
+			]);
+		},
+		[compressAndDownscaleImage, style.pasteScaleMode, style.quality, style.size]
+	);
+
 	const handleDrop = useCallback(
 		(event: DragEvent) => {
 			event.preventDefault();
@@ -67,39 +83,25 @@ const ImageHolder = () => {
 
 			if (event.dataTransfer.getData("application/x-tier") !== "true") {
 				if (event.dataTransfer.files.length > 0) {
-					const time = new Date().getTime();
+					const time = Date.now();
 					const files = Array.from(event.dataTransfer.files);
 
 					files.forEach((file, index) => {
 						if (!file.type.startsWith("image/")) return;
 
 						const reader = new FileReader();
-						reader.onload = async function (event) {
-							if (event.target == null) return;
-							const imageData = event.target.result;
-							const shouldScale = style.pasteScaleMode === "fixed";
-							const compressedImageData = await compressAndDownscaleImage(
-								imageData as string,
-								style.size,
-								style.quality,
-								shouldScale
-							);
-
-							setImages((prevImages) => [
-								...prevImages,
-								{
-									id: time + index,
-									url: compressedImageData as string,
-									text: ""
-								}
-							]);
+						reader.onload = (readerEvent) => {
+							const result = readerEvent.target?.result;
+							if (typeof result === "string") {
+								void storeImportedImage(time + index, result);
+							}
 						};
 						reader.readAsDataURL(file);
 					});
 				}
 			}
 		},
-		[compressAndDownscaleImage, style.pasteScaleMode, style.quality, style.size]
+		[storeImportedImage]
 	);
 
 	const dragStart = useCallback((event: DragEvent) => {
@@ -108,6 +110,9 @@ const ImageHolder = () => {
 	}, []);
 
 	const handleDeleteImage = useCallback((imageId: number) => {
+		deleteOriginalImageData(imageId).catch((error) => {
+			console.error("Failed to delete original image data:", error);
+		});
 		setImages((prevImages) => prevImages.filter((img) => img.id !== imageId));
 	}, []);
 
@@ -122,7 +127,7 @@ const ImageHolder = () => {
 			const items = event.clipboardData?.items;
 			if (!items) return;
 
-			const time = new Date().getTime();
+			const time = Date.now();
 			for (let i = 0; i < items.length; i++) {
 				const item = items[i];
 				if (item.type.indexOf("image") === -1) continue;
@@ -131,24 +136,15 @@ const ImageHolder = () => {
 				const reader = new FileReader();
 				reader.readAsDataURL(blob || new Blob());
 
-				reader.onloadend = async function () {
-					const base64data = reader.result;
-					const shouldScale = style.pasteScaleMode === "fixed";
-					const compressedImageData = await compressAndDownscaleImage(
-						base64data as string,
-						style.size,
-						style.quality,
-						shouldScale
-					);
-
-					setImages((prevImages) => [
-						...prevImages,
-						{ id: time + i, url: compressedImageData, text: "" }
-					]);
+				reader.onloadend = (readerEvent) => {
+					const result = typeof readerEvent.target?.result === "string" ? readerEvent.target.result : null;
+					if (result) {
+						void storeImportedImage(time + i, result);
+					}
 				};
 			}
 		},
-		[compressAndDownscaleImage, style.pasteScaleMode, style.quality, style.size]
+		[storeImportedImage]
 	);
 
 	useEffect(() => {
@@ -210,38 +206,40 @@ const ImageHolder = () => {
 		persistImages();
 	}, [images, hasHydratedImages]);
 
+
 	return (
 		<div className="bg-stone-700 flex">
-			<ReactSortable
-				list={images}
-				setList={setImages}
-				tag="div"
-				group="shared"
-				className="react-sortablejs flex space-x-4 p-4 min-h-[7rem] flex-wrap flex-1 items-center"
-				filter=".ignore-elements"
-			>
+			<div className="flex flex-col flex-1">
 				{images.length === 0 ? (
-					<p className="text-gray-400 text-center w-full ignore-elements">
+					<p className="text-gray-400 text-center w-full ignore-elements p-4">
 						Drag & Drop or Copy and Paste images in here!
 						<br />
-						If this is your first time using this you can right click tiers to
-						edit them and drag them about, clicking the "Add Tier" will add more tiers (duh)
+						If this is your first time using this you can right click tiers to edit them and drag them about, clicking the "Add Tier" will add more tiers (duh)
 						<br />
 						<span className="font-semibold text-gray-300">All images are stored locally on your PC and cannot be shared*</span>
 					</p>
 				) : (
-					images.map((image) => (
-						<Image
-							key={image.id}
-							imageId={image.id}
-							imageUrl={image.url}
-							imageText={image.text}
-							onDelete={handleDeleteImage}
-							onEditText={handleEditImageText}
-						/>
-					))
+					<ReactSortable
+						list={images}
+						setList={setImages}
+						tag="div"
+						group="shared"
+						className="react-sortablejs flex space-x-4 p-4 min-h-[7rem] flex-wrap flex-1 items-center"
+						filter=".ignore-elements"
+					>
+						{images.map((image) => (
+							<Image
+								key={image.id}
+								imageId={image.id}
+								imageUrl={image.url}
+								imageText={image.text}
+								onDelete={handleDeleteImage}
+								onEditText={handleEditImageText}
+							/>
+						))}
+					</ReactSortable>
 				)}
-			</ReactSortable>
+			</div>
 			<button className="bg-stone-600" onClick={openModal}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -263,13 +261,7 @@ const ImageHolder = () => {
 					/>
 				</svg>
 			</button>
-			<SettingsModal
-				isOpen={isModalOpen}
-				onClose={() => {
-					closeModal();
-				}}
-				setImages={setImages}
-			/>
+			<SettingsModal isOpen={isModalOpen} onClose={closeModal} setImages={setImages} />
 		</div>
 	);
 };

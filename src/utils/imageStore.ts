@@ -5,13 +5,20 @@ const MIGRATION_FLAG = "imageStoreMigratedV1";
 
 const IMAGE_HOLDER_KEY = "imageHolder";
 const TIER_IMAGE_KEY_PREFIX = "tierImages_";
+const ORIGINAL_IMAGE_KEY_PREFIX = "originalImage_";
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 let migrationPromise: Promise<void> | null = null;
 
 interface ImageItem {
-  id: number;
-  url: string;
+	id: number;
+	url: string;
+	text?: string;
+}
+
+interface OriginalImageItem {
+	id: number;
+	url: string;
 }
 
 const openDatabase = (): Promise<IDBDatabase> => {
@@ -62,6 +69,21 @@ export const setImageStore = async (
 	images: ImageItem[],
 ): Promise<void> => {
 	await withStore("readwrite", (store) => store.put(images, key));
+};
+
+export const setOriginalImageData = async (
+	image: OriginalImageItem,
+): Promise<void> => {
+	await withStore("readwrite", (store) => store.put(image.url, `${ORIGINAL_IMAGE_KEY_PREFIX}${image.id}`));
+};
+
+export const getOriginalImageData = async (imageId: number): Promise<string | null> => {
+	const value = await withStore("readonly", (store) => store.get(`${ORIGINAL_IMAGE_KEY_PREFIX}${imageId}`));
+	return typeof value === "string" ? value : null;
+};
+
+export const deleteOriginalImageData = async (imageId: number): Promise<void> => {
+	await withStore("readwrite", (store) => store.delete(`${ORIGINAL_IMAGE_KEY_PREFIX}${imageId}`));
 };
 
 export const deleteImageStore = async (key: string): Promise<void> => {
@@ -117,6 +139,14 @@ export const migrateImageStoresFromLocalStorage = async (): Promise<void> => {
 			const parsedImages = parseStoredImages(localStorage.getItem(key));
 			if (parsedImages.length > 0) {
 				await setImageStore(key, parsedImages);
+				await Promise.all(
+					parsedImages.map((image) =>
+						setOriginalImageData({
+							id: image.id,
+							url: image.url,
+						})
+					)
+				);
 			}
 
 			if (localStorage.getItem(key) !== null) {
