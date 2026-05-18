@@ -107,6 +107,16 @@ const ImageHolder = () => {
 		event.dataTransfer.setData("application/x-tier", "true");
 	}, []);
 
+	const handleDeleteImage = useCallback((imageId: number) => {
+		setImages((prevImages) => prevImages.filter((img) => img.id !== imageId));
+	}, []);
+
+	const handleEditImageText = useCallback((imageId: number, nextText: string) => {
+		setImages((prevImages) =>
+			prevImages.map((img) => (img.id === imageId ? { ...img, text: nextText } : img))
+		);
+	}, []);
+
 	const handlePaste = useCallback(
 		(event: ClipboardEvent) => {
 			const items = event.clipboardData?.items;
@@ -223,21 +233,11 @@ const ImageHolder = () => {
 					images.map((image) => (
 						<Image
 							key={image.id}
+							imageId={image.id}
 							imageUrl={image.url}
 							imageText={image.text}
-							onDelete={() => {
-								const updatedImages = images.filter(
-									(img) => img.id !== image.id
-								);
-								setImages(updatedImages);
-							}}
-							onEditText={(nextText) => {
-								setImages((prevImages) =>
-									prevImages.map((img) =>
-										img.id === image.id ? { ...img, text: nextText } : img
-									)
-								);
-							}}
+							onDelete={handleDeleteImage}
+							onEditText={handleEditImageText}
 						/>
 					))
 				)}

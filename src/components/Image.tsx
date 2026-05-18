@@ -2,13 +2,15 @@ import React, { useState, useContext, useEffect, useRef } from "react";
 import { StylingContext } from "../App";
 
 interface ImageWithContextMenuProps {
+	imageId: number;
 	imageUrl: string;
 	imageText?: string;
-	onDelete: () => void;
-	onEditText: (nextText: string) => void;
+	onDelete: (imageId: number) => void;
+	onEditText: (imageId: number, nextText: string) => void;
 }
 
 const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
+	imageId,
 	imageUrl,
 	imageText,
 	onDelete,
@@ -94,7 +96,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 
 	const saveText = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		onEditText(draftText);
+		onEditText(imageId, draftText);
 		setIsTextModalOpen(false);
 	};
 
@@ -108,7 +110,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	const handleDraftTextKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (event.key === "Enter" && !event.shiftKey) {
 			event.preventDefault();
-			onEditText(draftText);
+			onEditText(imageId, draftText);
 			setIsTextModalOpen(false);
 		}
 	};
@@ -121,7 +123,14 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 				onMouseLeave={handleMouseLeave}
 				onContextMenu={handleContextMenu}
 			>
-				<img src={imageUrl} className={style.ratio} style={{height: `${style.size}px`, width: `${style.size}px`}} alt="" />
+				<img
+					src={imageUrl}
+					className={style.ratio}
+					style={{ height: `${style.size}px`, width: `${style.size}px` }}
+					alt=""
+					loading="lazy"
+					decoding="async"
+				/>
 				{Boolean(imageText?.trim()) && (
 					<div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5 text-[10px] text-white whitespace-pre-wrap break-words">
 						{imageText}
@@ -130,7 +139,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 				{isHovered && (
 					<div
 						className="absolute top-0 right-0 p-1 cursor-pointer text-red-500"
-						onClick={onDelete}
+						onClick={() => onDelete(imageId)}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -165,7 +174,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 						type="button"
 						className="block w-full text-left px-3 py-2 text-red-400 hover:bg-zinc-700"
 						onClick={() => {
-							onDelete();
+							onDelete(imageId);
 							setIsContextMenuOpen(false);
 						}}
 					>
@@ -214,4 +223,4 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	);
 };
 
-export default ImageWithContextMenu;
+export default React.memo(ImageWithContextMenu);

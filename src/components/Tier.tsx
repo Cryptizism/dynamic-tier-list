@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { SketchPicker } from "react-color";
 import { StylingContext, TierContext } from "../App"
@@ -117,6 +117,16 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 		setIsContextMenuOpen(false);
 	};
 
+	const handleDeleteImage = useCallback((imageId: number) => {
+		setImages((prevImages) => prevImages.filter((img) => img.id !== imageId));
+	}, []);
+
+	const handleEditImageText = useCallback((imageId: number, nextText: string) => {
+		setImages((prevImages) =>
+			prevImages.map((img) => (img.id === imageId ? { ...img, text: nextText } : img))
+		);
+	}, []);
+
 	const handleDeleteTier = () => {
 		onDelete();
 		handleCloseContextMenu();
@@ -160,19 +170,11 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 				{images.map((image) => (
 					<Image
 						key={image.id}
+						imageId={image.id}
 						imageUrl={image.url}
 						imageText={image.text}
-						onDelete={() => {
-							const updatedImages = images.filter((img) => img.id !== image.id);
-							setImages(updatedImages);
-						}}
-						onEditText={(nextText) => {
-							setImages((prevImages) =>
-								prevImages.map((img) =>
-									img.id === image.id ? { ...img, text: nextText } : img
-								)
-							);
-						}}
+						onDelete={handleDeleteImage}
+						onEditText={handleEditImageText}
 					/>
 				))}
 			</ReactSortable>
