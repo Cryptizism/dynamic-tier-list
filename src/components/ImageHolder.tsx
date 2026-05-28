@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from "react";
+import { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { ReactSortable } from "react-sortablejs";
 import SettingsModal from "./SettingsModal";
 import Image from "./Image";
@@ -9,6 +9,9 @@ import {
 	deleteOriginalImageData,
 	setOriginalImageData,
 	setImageStore,
+	getFullResolutionImages,
+	resizeStoredImages,
+	resizeImageDataUrl,
 } from "../utils/imageStore";
 
 interface ImageItem {
@@ -23,6 +26,10 @@ const ImageHolder = () => {
 	const [images, setImages] = useState<ImageItem[]>([]);
 	const [hasHydratedImages, setHasHydratedImages] = useState(false);
 	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [previewPixelSize, setPreviewPixelSize] = useState(() =>
+		Math.max(1, Math.round(style.size * (window.devicePixelRatio || 1)))
+	);
+	const isPreviewRefreshRef = useRef(false);
 
 	const openModal = () => {
 		setIsModalOpen(true);
@@ -32,25 +39,49 @@ const ImageHolder = () => {
 		setIsModalOpen(false);
 	};
 
-	const compressAndDownscaleImage = useCallback(
-		(base64: string, maxHeight: number, qualityPercent: number, shouldScale: boolean): Promise<string> => {
-			return new Promise((resolve) => {
-				const img = document.createElement("img");
-				img.src = base64;
-				img.onload = function () {
-					const canvas = document.createElement("canvas");
-					const ctx = canvas.getContext("2d");
-					const scale = shouldScale ? maxHeight / img.height : Math.min(1, maxHeight / img.height);
-					canvas.width = img.width * scale;
-					canvas.height = img.height * scale;
-					ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-					const compressedImageData = canvas.toDataURL("image/jpeg", qualityPercent / 100);
-					resolve(compressedImageData);
-				};
-			});
-		},
-		[]
+	const getPreviewPixelSize = useCallback(
+		() => Math.max(1, Math.round(style.size * (window.devicePixelRatio || 1))),
+		[style.size]
 	);
+
+	useEffect(() => {
+		let debounceHandle: number | undefined;
+
+		const schedulePreviewRefresh = () => {
+			if (debounceHandle !== undefined) {
+				window.clearTimeout(debounceHandle);
+			}
+
+			debounceHandle = window.setTimeout(() => {
+				setPreviewPixelSize((currentValue) => {
+					const nextValue = getPreviewPixelSize();
+					if (currentValue === nextValue) {
+						isPreviewRefreshRef.current = false;
+						return currentValue;
+					}
+					isPreviewRefreshRef.current = true;
+					return nextValue;
+				});
+			}, 150);
+		};
+
+		setPreviewPixelSize(getPreviewPixelSize());
+		window.addEventListener("resize", schedulePreviewRefresh);
+		window.addEventListener("scroll", schedulePreviewRefresh, { passive: true });
+		window.visualViewport?.addEventListener("resize", schedulePreviewRefresh);
+		window.visualViewport?.addEventListener("scroll", schedulePreviewRefresh, { passive: true });
+
+		return () => {
+			if (debounceHandle !== undefined) {
+				window.clearTimeout(debounceHandle);
+			}
+
+			window.removeEventListener("resize", schedulePreviewRefresh);
+			window.removeEventListener("scroll", schedulePreviewRefresh);
+			window.visualViewport?.removeEventListener("resize", schedulePreviewRefresh);
+			window.visualViewport?.removeEventListener("scroll", schedulePreviewRefresh);
+		};
+	}, [getPreviewPixelSize]);
 
 	const storeImportedImage = useCallback(
 		async (imageId: number, originalDataUrl: string) => {
@@ -60,20 +91,18 @@ const ImageHolder = () => {
 				console.error("Failed to save original image data:", error);
 			}
 
-			const shouldScale = style.pasteScaleMode === "fixed";
-			const previewImageData = await compressAndDownscaleImage(
-				originalDataUrl,
-				style.size,
-				style.quality,
-				shouldScale
-			);
+			const previewImageData = await resizeImageDataUrl(originalDataUrl, {
+				size: previewPixelSize,
+				quality: style.quality,
+				pasteScaleMode: style.pasteScaleMode,
+			});
 
 			setImages((prevImages) => [
 				...prevImages,
 				{ id: imageId, url: previewImageData, text: "" }
 			]);
 		},
-		[compressAndDownscaleImage, style.pasteScaleMode, style.quality, style.size]
+		[previewPixelSize, style.pasteScaleMode, style.quality]
 	);
 
 	const handleDrop = useCallback(
@@ -153,8 +182,14 @@ const ImageHolder = () => {
 		const loadImages = async () => {
 			await migrateImageStoresFromLocalStorage();
 			const storedImages = await getImageStore("imageHolder");
+			const resizedImages = await resizeStoredImages(storedImages, {
+				size: previewPixelSize,
+				quality: style.quality,
+				pasteScaleMode: style.pasteScaleMode,
+			});
 			if (isMounted) {
-				setImages(storedImages);
+				isPreviewRefreshRef.current = false;
+				setImages(resizedImages);
 				setHasHydratedImages(true);
 			}
 		};
@@ -164,7 +199,7 @@ const ImageHolder = () => {
 		return () => {
 			isMounted = false;
 		};
-	}, []);
+	}, [previewPixelSize, style.pasteScaleMode, style.quality, style.size]);
 
 	useEffect(() => {
 		const dragOver = (event: DragEvent) => {
@@ -194,9 +229,15 @@ const ImageHolder = () => {
 			return;
 		}
 
+		if (isPreviewRefreshRef.current) {
+			isPreviewRefreshRef.current = false;
+			return;
+		}
+
 		const persistImages = async () => {
 			try {
-				await setImageStore("imageHolder", images);
+				const fullResolutionImages = await getFullResolutionImages(images);
+				await setImageStore("imageHolder", fullResolutionImages);
 			} catch (error) {
 				window.alert("Failed to save images locally. You can try deleting some images or clearing local storage in settings.");
 				console.error("Failed to save images to IndexedDB:", error);

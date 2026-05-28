@@ -21,6 +21,12 @@ interface OriginalImageItem {
 	url: string;
 }
 
+export interface ImageResizeOptions {
+	size: number;
+	quality: number;
+	pasteScaleMode: "fixed" | "preserve";
+}
+
 const openDatabase = (): Promise<IDBDatabase> => {
 	if (dbPromise) {
 		return dbPromise;
@@ -88,6 +94,105 @@ export const deleteOriginalImageData = async (imageId: number): Promise<void> =>
 
 export const deleteImageStore = async (key: string): Promise<void> => {
 	await withStore("readwrite", (store) => store.delete(key));
+};
+
+const compressAndDownscaleImage = (
+	base64: string,
+	maxHeight: number,
+	qualityPercent: number,
+	shouldScale: boolean,
+): Promise<string> => {
+	return new Promise((resolve) => {
+		const img = document.createElement("img");
+		img.onload = () => {
+			console.debug("[imageStore] resize start", {
+				inputLength: base64.length,
+				maxHeight,
+				qualityPercent,
+				shouldScale,
+				naturalWidth: img.naturalWidth,
+				naturalHeight: img.naturalHeight,
+			});
+			const canvas = document.createElement("canvas");
+			const ctx = canvas.getContext("2d");
+			if (!ctx || img.naturalWidth === 0 || img.naturalHeight === 0) {
+				console.warn("[imageStore] resize skipped", {
+					hasContext: Boolean(ctx),
+					naturalWidth: img.naturalWidth,
+					naturalHeight: img.naturalHeight,
+				});
+				resolve(base64);
+				return;
+			}
+
+			const scale = shouldScale ? maxHeight / img.naturalHeight : Math.min(1, maxHeight / img.naturalHeight);
+			canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+			canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+			ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+			const output = canvas.toDataURL("image/jpeg", qualityPercent / 100);
+			console.debug("[imageStore] resize done", {
+				outputLength: output.length,
+				canvasWidth: canvas.width,
+				canvasHeight: canvas.height,
+				qualityPercent,
+			});
+			resolve(output);
+		};
+		img.onerror = () => {
+			console.warn("[imageStore] resize failed to load image", {
+				inputLength: base64.length,
+			});
+			resolve(base64);
+		};
+		img.src = base64;
+	});
+};
+
+export const resizeImageDataUrl = async (
+	base64: string,
+	options: ImageResizeOptions,
+): Promise<string> => {
+	console.debug("[imageStore] resize request", {
+		inputLength: base64.length,
+		options,
+	});
+	return compressAndDownscaleImage(
+		base64,
+		options.size,
+		options.quality,
+		options.pasteScaleMode === "fixed",
+	);
+};
+
+export const resizeStoredImages = async (
+	images: ImageItem[],
+	options: ImageResizeOptions,
+): Promise<ImageItem[]> => {
+	return Promise.all(
+		images.map(async (image) => {
+			const originalImage = await getOriginalImageData(image.id);
+			const source = originalImage ?? image.url;
+			const resizedUrl = await resizeImageDataUrl(source, options);
+
+			return {
+				...image,
+				url: resizedUrl,
+			};
+		}),
+	);
+};
+
+export const getFullResolutionImages = async (images: ImageItem[]): Promise<ImageItem[]> => {
+	return Promise.all(
+		images.map(async (image) => {
+			const originalImage = await getOriginalImageData(image.id);
+
+			return {
+				...image,
+				url: originalImage ?? image.url,
+			};
+		}),
+	);
 };
 
 export const clearAllImageStores = async (): Promise<void> => {

@@ -168,8 +168,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 						<div className="relative flex items-center w-fit">
 							<input
 								type="number"
-								min={50}
-								max={500}
+								min={16}
 								value={selectedStyle.size}
 								onChange={(e) =>
 									setSelectedStyle({ ...selectedStyle, size: parseInt(e.target.value) })

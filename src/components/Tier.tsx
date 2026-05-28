@@ -7,7 +7,9 @@ import {
 	getImageStore,
 	migrateImageStoresFromLocalStorage,
 	deleteOriginalImageData,
-	setImageStore
+	setImageStore,
+	getFullResolutionImages,
+	resizeStoredImages,
 } from "../utils/imageStore";
 
 interface ImageItem {
@@ -28,6 +30,10 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 
 	const [images, setImages] = useState<ImageItem[]>([]);
 	const [hasHydratedImages, setHasHydratedImages] = useState(false);
+	const [previewPixelSize, setPreviewPixelSize] = useState(() =>
+		Math.max(1, Math.round(style.size * (window.devicePixelRatio || 1)))
+	);
+	const isPreviewRefreshRef = useRef(false);
 
 	const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 	const [contextMenuPosition, setContextMenuPosition] = useState({
@@ -38,6 +44,50 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 	const { tiers, setTiers } = useContext(TierContext) || {};
 	
 	const contextMenuRef = useRef<HTMLDivElement>(null);
+
+	const getPreviewPixelSize = useCallback(
+		() => Math.max(1, Math.round(style.size * (window.devicePixelRatio || 1))),
+		[style.size]
+	);
+
+	useEffect(() => {
+		let debounceHandle: number | undefined;
+
+		const schedulePreviewRefresh = () => {
+			if (debounceHandle !== undefined) {
+				window.clearTimeout(debounceHandle);
+			}
+
+			debounceHandle = window.setTimeout(() => {
+				setPreviewPixelSize((currentValue) => {
+					const nextValue = getPreviewPixelSize();
+					if (currentValue === nextValue) {
+						isPreviewRefreshRef.current = false;
+						return currentValue;
+					}
+					isPreviewRefreshRef.current = true;
+					return nextValue;
+				});
+			}, 150);
+		};
+
+		setPreviewPixelSize(getPreviewPixelSize());
+		window.addEventListener("resize", schedulePreviewRefresh);
+		window.addEventListener("scroll", schedulePreviewRefresh, { passive: true });
+		window.visualViewport?.addEventListener("resize", schedulePreviewRefresh);
+		window.visualViewport?.addEventListener("scroll", schedulePreviewRefresh, { passive: true });
+
+		return () => {
+			if (debounceHandle !== undefined) {
+				window.clearTimeout(debounceHandle);
+			}
+
+			window.removeEventListener("resize", schedulePreviewRefresh);
+			window.removeEventListener("scroll", schedulePreviewRefresh);
+			window.visualViewport?.removeEventListener("resize", schedulePreviewRefresh);
+			window.visualViewport?.removeEventListener("scroll", schedulePreviewRefresh);
+		};
+	}, [getPreviewPixelSize]);
 
 	const tierIndex = tiers.findIndex((tier) => tier.color === color && tier.tierLabel === tierLabel);
 	const editedColor = tierIndex !== -1 ? tiers[tierIndex].color : color;
@@ -67,8 +117,14 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 		const loadImages = async () => {
 			await migrateImageStoresFromLocalStorage();
 			const storedImages = await getImageStore(`tierImages_${id}`);
+			const resizedImages = await resizeStoredImages(storedImages, {
+				size: previewPixelSize,
+				quality: style.quality,
+				pasteScaleMode: style.pasteScaleMode,
+			});
 			if (isMounted) {
-				setImages(storedImages);
+				isPreviewRefreshRef.current = false;
+				setImages(resizedImages);
 				setHasHydratedImages(true);
 			}
 		};
@@ -78,15 +134,21 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 		return () => {
 			isMounted = false;
 		};
-	}, [id]);
+	}, [id, previewPixelSize, style.pasteScaleMode, style.quality, style.size]);
 
 	useEffect(() => {
 		if (!hasHydratedImages) {
 			return;
 		}
 
+		if (isPreviewRefreshRef.current) {
+			isPreviewRefreshRef.current = false;
+			return;
+		}
+
 		const persistImages = async () => {
-			await setImageStore(`tierImages_${id}`, images);
+			const fullResolutionImages = await getFullResolutionImages(images);
+			await setImageStore(`tierImages_${id}`, fullResolutionImages);
 		};
 
 		persistImages();
