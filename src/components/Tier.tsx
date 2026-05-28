@@ -208,7 +208,6 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 		const menuHeight = contextMenuRef.current?.offsetHeight || 402;
 		let left = contextMenuPosition.left;
 		let top = contextMenuPosition.top;
-		console.log({ left, top, menuWidth, menuHeight });
 		if (left + menuWidth > window.innerWidth) {
 			left = window.innerWidth - menuWidth - 10;
 		}
