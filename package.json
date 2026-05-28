@@ -10,7 +10,9 @@
 		"@types/node": "^16.18.39",
 		"@types/react": "^18.2.19",
 		"@types/react-dom": "^18.2.7",
+		"exceljs": "^4.4.0",
 		"html-to-image": "^1.11.11",
+		"jszip": "^3.10.1",
 		"react": "^18.2.0",
 		"react-color": "^2.19.3",
 		"react-dom": "^18.2.0",
@@ -34,9 +36,18 @@
 			"react-app/jest"
 		],
 		"rules": {
-			"indent": ["error", "tab"],
-			"react/jsx-indent": ["error", "tab"],
-			"react/jsx-indent-props": ["error", "tab"],
+			"indent": [
+				"error",
+				"tab"
+			],
+			"react/jsx-indent": [
+				"error",
+				"tab"
+			],
+			"react/jsx-indent-props": [
+				"error",
+				"tab"
+			],
 			"no-mixed-spaces-and-tabs": "error"
 		}
 	},

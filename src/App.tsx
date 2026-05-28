@@ -123,8 +123,8 @@ const App = () => {
 				<TierContext.Provider value={{ tiers, setTiers }}>
 					<TierList />
 					<AddTierButton />
+					<ImageHolder />
 				</TierContext.Provider>
-				<ImageHolder />
 			</StylingContext.Provider>
 		</div>
 	);

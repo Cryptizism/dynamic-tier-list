@@ -1,7 +1,12 @@
 import React, { FormEvent, useContext, useState } from "react";
-import { StylingContext } from "../App";
+import { StylingContext, TierContext } from "../App";
 import { toBlob } from 'html-to-image';
 import { clearAllImageStores } from "../utils/imageStore";
+import {
+	buildExportZip,
+	buildSpreadsheetExport,
+	collectFullResolutionManifest,
+} from "../utils/exportUtils";
 
 interface ImageItem {
 	id: number;
@@ -16,9 +21,13 @@ interface ModalProps {
 
 const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 	const { style, setStyle } = useContext(StylingContext);
+	const { tiers } = useContext(TierContext);
 	const [selectedStyle, setSelectedStyle] = useState(style);
 	const [isCopying, setIsCopying] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
+	const [isExporting, setIsExporting] = useState(false);
+	const [exportStatus, setExportStatus] = useState<string | null>(null);
+	const CLIPBOARD_LIMIT_BYTES = 8 * 1024 * 1024;
 
 	const waitForPaint = () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))); // Without setTimeout it doesn't work? LAME ASS CODE
 
@@ -38,6 +47,21 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 		}
 
 		return toBlob(node, exportOptions);
+	};
+
+	const saveBlobAsPng = (blob: Blob, filename = "tierlist.png") => {
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = filename;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+	};
+
+	const getClipboardLimitBytes = (blob: Blob): number => {
+		return Math.max(CLIPBOARD_LIMIT_BYTES, Math.round(blob.size * 0.5));
 	};
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -67,36 +91,140 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 			await waitForPaint();
 			const blob = await renderTierListToBlob();
 			if (blob) {
+				const clipboardLimitBytes = getClipboardLimitBytes(blob);
+				if (blob.size > clipboardLimitBytes) {
+					const blobSizeMb = (blob.size / (1024 * 1024)).toFixed(2);
+					const limitMb = (clipboardLimitBytes / (1024 * 1024)).toFixed(2);
+					const shouldSave = window.confirm(
+						`This image is ${blobSizeMb} MB and exceeds the copy limit of ${limitMb} MB. Save the image instead?`,
+					);
+
+					if (shouldSave) {
+						saveBlobAsPng(blob);
+					}
+					return;
+				}
+
 				const item = new ClipboardItem({ "image/png": blob });
 				await navigator.clipboard.write([item]);
 			}
 		} catch (error) {
 			console.error('Failed to copy image: ', error);
+			const shouldSave = window.confirm(
+				"Copying to clipboard failed on this device/browser. Save the image instead?",
+			);
+			if (shouldSave) {
+				await waitForPaint();
+				const fallbackBlob = await renderTierListToBlob();
+				if (fallbackBlob) {
+					saveBlobAsPng(fallbackBlob);
+				}
+			}
 		} finally {
 			setIsCopying(false);
 		}
 	};
 
 	const handleSaveImage = async () => {
-		if (isCopying || isSaving) return;
+		if (isCopying || isSaving || isExporting) return;
 		setIsSaving(true);
 		try {
 			await waitForPaint();
 			const blob = await renderTierListToBlob();
 			if (blob) {
-				const url = URL.createObjectURL(blob);
-				const link = document.createElement('a');
-				link.href = url;
-				link.download = 'tierlist.png';
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
-				URL.revokeObjectURL(url);
+				saveBlobAsPng(blob);
 			}
 		} catch (error) {
 			console.error('Failed to save image: ', error);
 		} finally {
 			setIsSaving(false);
+		}
+	};
+
+	const downloadBlob = (blob: Blob, filename: string) => {
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = filename;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+	};
+
+	const handleExportZip = async () => {
+		if (isCopying || isSaving || isExporting) return;
+		if (!Array.isArray(tiers)) {
+			setExportStatus("Export unavailable: tier data is not ready yet.");
+			return;
+		}
+
+		setIsExporting(true);
+		setExportStatus("Collecting full-resolution images...");
+
+		try {
+			const manifest = await collectFullResolutionManifest(tiers);
+			if (manifest.length === 0) {
+				setExportStatus("No images to export.");
+				return;
+			}
+
+			setExportStatus("Building ZIP archive...");
+			const result = await buildExportZip(manifest);
+
+			const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
+			downloadBlob(result.zipBlob, `tierlist-fullres-${timestamp}.zip`);
+			setExportStatus("Export finished.");
+		} catch (error) {
+			console.error("Failed to export full-resolution images:", error);
+			setExportStatus("Export failed. Check browser console for details.");
+		} finally {
+			setIsExporting(false);
+		}
+	};
+
+	const handleExportSpreadsheet = async () => {
+		if (isCopying || isSaving || isExporting) return;
+		if (!Array.isArray(tiers)) {
+			setExportStatus("Export unavailable: tier data is not ready yet.");
+			return;
+		}
+
+		setIsExporting(true);
+		setExportStatus("Collecting full-resolution images...");
+
+		try {
+			const manifest = await collectFullResolutionManifest(tiers);
+			if (manifest.length === 0) {
+				setExportStatus("No images to export.");
+				return;
+			}
+
+			setExportStatus("Building spreadsheet...");
+			const ratioMode =
+				selectedStyle.ratio === "stretch" || selectedStyle.ratio === "fit"
+					? selectedStyle.ratio
+					: "preserve";
+			const result = await buildSpreadsheetExport(manifest, {
+				embedImages: true,
+				imageSizePx: selectedStyle.size,
+				ratioMode,
+			});
+
+			const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
+			downloadBlob(result.spreadsheetBlob, `tierlist-${timestamp}.xlsx`);
+
+			if (!result.usedEmbeddedSpreadsheet && result.spreadsheetReason) {
+				setExportStatus(result.spreadsheetReason);
+				return;
+			}
+
+			setExportStatus("Export finished.");
+		} catch (error) {
+			console.error("Failed to export full-resolution images:", error);
+			setExportStatus("Export failed. Check browser console for details.");
+		} finally {
+			setIsExporting(false);
 		}
 	};
 
@@ -244,7 +372,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 						</button>
 						<button
 							type="button"
-							disabled={isCopying || isSaving}
+							disabled={isCopying || isSaving || isExporting}
 							className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
 							onClick={handleCopyImage}
 						>
@@ -252,13 +380,41 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 						</button>
 						<button
 							type="button"
-							disabled={isCopying || isSaving}
+							disabled={isCopying || isSaving || isExporting}
 							className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
 							onClick={handleSaveImage}
 						>
 							{isSaving ? "Saving..." : "Save Image"}
 						</button>
 					</div>
+					<details className="mb-4 bg-zinc-900 rounded-md border border-zinc-700">
+						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-gray-200">
+							Export
+						</summary>
+						<div className="px-3 pb-3 pt-1 flex flex-row gap-2 flex-wrap">
+							<button
+								type="button"
+								disabled={isCopying || isSaving || isExporting}
+								className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed"
+								onClick={handleExportZip}
+							>
+								{isExporting ? "Exporting..." : "Export Full-Res ZIP"}
+							</button>
+							<button
+								type="button"
+								disabled={isCopying || isSaving || isExporting}
+								className="px-4 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-700 disabled:opacity-60 disabled:cursor-not-allowed"
+								onClick={handleExportSpreadsheet}
+							>
+								{isExporting ? "Exporting..." : "Export Spreadsheet (XLSX)"}
+							</button>
+						</div>
+					</details>
+					{exportStatus && (
+						<p className="mb-4 text-sm text-gray-300">
+							{exportStatus}
+						</p>
+					)}
 					<div className="flex justify-end">
 						<button
 							type="button"
