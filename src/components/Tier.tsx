@@ -8,15 +8,9 @@ import {
 	migrateImageStoresFromLocalStorage,
 	deleteOriginalImageData,
 	setImageStore,
-	getFullResolutionImages,
 	resizeStoredImages,
+	type ResolvedImageItem,
 } from "../utils/imageStore";
-
-interface ImageItem {
-	id: number;
-	url: string;
-	text?: string;
-}
 
 interface TierProps {
 	id: number;
@@ -28,7 +22,7 @@ interface TierProps {
 const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 	const { style } = useContext(StylingContext);
 
-	const [images, setImages] = useState<ImageItem[]>([]);
+	const [images, setImages] = useState<ResolvedImageItem[]>([]);
 	const [hasHydratedImages, setHasHydratedImages] = useState(false);
 	const [previewPixelSize, setPreviewPixelSize] = useState(() =>
 		Math.max(1, Math.round(style.size * (window.devicePixelRatio || 1)))
@@ -147,8 +141,7 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 		}
 
 		const persistImages = async () => {
-			const fullResolutionImages = await getFullResolutionImages(images);
-			await setImageStore(`tierImages_${id}`, fullResolutionImages);
+			await setImageStore(`tierImages_${id}`, images);
 		};
 
 		persistImages();

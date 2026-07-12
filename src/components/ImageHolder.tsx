@@ -9,21 +9,15 @@ import {
 	deleteOriginalImageData,
 	setOriginalImageData,
 	setImageStore,
-	getFullResolutionImages,
 	resizeStoredImages,
 	resizeImageDataUrl,
+	type ResolvedImageItem,
 } from "../utils/imageStore";
-
-interface ImageItem {
-	id: number;
-	url: string;
-	text?: string;
-}
 
 const ImageHolder = () => {
 	const { style } = useContext(StylingContext);
 
-	const [images, setImages] = useState<ImageItem[]>([]);
+	const [images, setImages] = useState<ResolvedImageItem[]>([]);
 	const [hasHydratedImages, setHasHydratedImages] = useState(false);
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [previewPixelSize, setPreviewPixelSize] = useState(() =>
@@ -236,8 +230,7 @@ const ImageHolder = () => {
 
 		const persistImages = async () => {
 			try {
-				const fullResolutionImages = await getFullResolutionImages(images);
-				await setImageStore("imageHolder", fullResolutionImages);
+				await setImageStore("imageHolder", images);
 			} catch (error) {
 				window.alert("Failed to save images locally. You can try deleting some images or clearing local storage in settings.");
 				console.error("Failed to save images to IndexedDB:", error);

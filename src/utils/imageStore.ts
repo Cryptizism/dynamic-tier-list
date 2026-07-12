@@ -1,19 +1,26 @@
 const DB_NAME = "dynamic-tier-list";
 const DB_VERSION = 1;
 const IMAGE_STORE = "images";
-const MIGRATION_FLAG = "imageStoreMigratedV1";
 
 const IMAGE_HOLDER_KEY = "imageHolder";
 const TIER_IMAGE_KEY_PREFIX = "tierImages_";
 const ORIGINAL_IMAGE_KEY_PREFIX = "originalImage_";
+const MIGRATION_FLAG_V2 = "imageStoreMigratedV2";
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 let migrationPromise: Promise<void> | null = null;
 
-interface ImageItem {
+export interface StoredImageItem {
 	id: number;
-	url: string;
 	text?: string;
+}
+
+export interface ResolvedImageItem extends StoredImageItem {
+	url: string;
+}
+
+interface LegacyImageItem extends StoredImageItem {
+	url?: string;
 }
 
 interface OriginalImageItem {
@@ -26,6 +33,37 @@ export interface ImageResizeOptions {
 	quality: number;
 	pasteScaleMode: "fixed" | "preserve";
 }
+
+const normalizeStoredImageItem = (value: unknown): StoredImageItem | null => {
+	if (typeof value !== "object" || value === null) {
+		return null;
+	}
+
+	const candidate = value as Partial<LegacyImageItem>;
+	if (typeof candidate.id !== "number") {
+		return null;
+	}
+
+	return {
+		id: candidate.id,
+		text: typeof candidate.text === "string" ? candidate.text : undefined,
+	};
+};
+
+const normalizeStoredImageItems = (value: unknown): StoredImageItem[] => {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	return value
+		.map(normalizeStoredImageItem)
+		.filter((item): item is StoredImageItem => item !== null);
+};
+
+const readLegacyStoredImageItems = async (key: string): Promise<LegacyImageItem[]> => {
+	const value = await withStore("readonly", (store) => store.get(key));
+	return Array.isArray(value) ? (value as LegacyImageItem[]) : [];
+};
 
 const openDatabase = (): Promise<IDBDatabase> => {
 	if (dbPromise) {
@@ -65,16 +103,21 @@ const withStore = async <T>(
 	});
 };
 
-export const getImageStore = async (key: string): Promise<ImageItem[]> => {
+export const getImageStore = async (key: string): Promise<StoredImageItem[]> => {
 	const value = await withStore("readonly", (store) => store.get(key));
-	return Array.isArray(value) ? (value as ImageItem[]) : [];
+	return normalizeStoredImageItems(value);
 };
 
 export const setImageStore = async (
 	key: string,
-	images: ImageItem[],
+	images: StoredImageItem[],
 ): Promise<void> => {
-	await withStore("readwrite", (store) => store.put(images, key));
+	const normalizedImages = images.map((image) => ({
+		id: image.id,
+		text: image.text,
+	}));
+
+	await withStore("readwrite", (store) => store.put(normalizedImages, key));
 };
 
 export const setOriginalImageData = async (
@@ -139,31 +182,35 @@ export const resizeImageDataUrl = async (
 };
 
 export const resizeStoredImages = async (
-	images: ImageItem[],
+	images: Array<StoredImageItem & { url?: string }>,
 	options: ImageResizeOptions,
-): Promise<ImageItem[]> => {
+): Promise<ResolvedImageItem[]> => {
 	return Promise.all(
 		images.map(async (image) => {
 			const originalImage = await getOriginalImageData(image.id);
-			const source = originalImage ?? image.url;
+			const source = originalImage ?? image.url ?? "";
 			const resizedUrl = await resizeImageDataUrl(source, options);
 
 			return {
-				...image,
+				id: image.id,
+				text: image.text,
 				url: resizedUrl,
 			};
 		}),
 	);
 };
 
-export const getFullResolutionImages = async (images: ImageItem[]): Promise<ImageItem[]> => {
+export const getFullResolutionImages = async (
+	images: Array<StoredImageItem & { url?: string }>,
+): Promise<ResolvedImageItem[]> => {
 	return Promise.all(
 		images.map(async (image) => {
 			const originalImage = await getOriginalImageData(image.id);
 
 			return {
-				...image,
-				url: originalImage ?? image.url,
+				id: image.id,
+				text: image.text,
+				url: originalImage ?? image.url ?? "",
 			};
 		}),
 	);
@@ -186,26 +233,13 @@ const getTierImageKeysFromLocalStorage = (): string[] => {
 	return keys;
 };
 
-const parseStoredImages = (value: string | null): ImageItem[] => {
-	if (!value) {
-		return [];
-	}
-
-	try {
-		const parsed = JSON.parse(value);
-		return Array.isArray(parsed) ? (parsed as ImageItem[]) : [];
-	} catch {
-		return [];
-	}
-};
-
 export const migrateImageStoresFromLocalStorage = async (): Promise<void> => {
 	if (migrationPromise) {
 		return migrationPromise;
 	}
 
 	migrationPromise = (async () => {
-		if (localStorage.getItem(MIGRATION_FLAG) === "true") {
+		if (localStorage.getItem(MIGRATION_FLAG_V2) === "true") {
 			return;
 		}
 
@@ -213,19 +247,25 @@ export const migrateImageStoresFromLocalStorage = async (): Promise<void> => {
 			IMAGE_HOLDER_KEY,
 			...getTierImageKeysFromLocalStorage(),
 		];
+		const uniqueKeys = Array.from(new Set(keysToMigrate));
 
-		for (const key of keysToMigrate) {
-			const parsedImages = parseStoredImages(localStorage.getItem(key));
-			if (parsedImages.length > 0) {
-				await setImageStore(key, parsedImages);
+		for (const key of uniqueKeys) {
+			const legacyImages = await readLegacyStoredImageItems(key);
+			if (legacyImages.length > 0) {
 				await Promise.all(
-					parsedImages.map((image) =>
-						setOriginalImageData({
+					legacyImages.map(async (image) => {
+						const existingOriginal = await getOriginalImageData(image.id);
+						if (existingOriginal || typeof image.url !== "string" || image.url.length === 0) {
+							return;
+						}
+
+						await setOriginalImageData({
 							id: image.id,
 							url: image.url,
-						})
-					)
+						});
+					}),
 				);
+				await setImageStore(key, legacyImages);
 			}
 
 			if (localStorage.getItem(key) !== null) {
@@ -233,7 +273,7 @@ export const migrateImageStoresFromLocalStorage = async (): Promise<void> => {
 			}
 		}
 
-		localStorage.setItem(MIGRATION_FLAG, "true");
+		localStorage.setItem(MIGRATION_FLAG_V2, "true");
 	})();
 
 	return migrationPromise;

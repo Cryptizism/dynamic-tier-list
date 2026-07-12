@@ -2,21 +2,17 @@ import React, { FormEvent, useContext, useState } from "react";
 import { StylingContext, TierContext } from "../App";
 import { toBlob } from 'html-to-image';
 import { clearAllImageStores } from "../utils/imageStore";
+import { type ResolvedImageItem } from "../utils/imageStore";
 import {
 	buildExportZip,
 	buildSpreadsheetExport,
 	collectFullResolutionManifest,
 } from "../utils/exportUtils";
 
-interface ImageItem {
-	id: number;
-	url: string;
-}
-
 interface ModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	setImages: React.Dispatch<React.SetStateAction<ImageItem[]>>;
+	setImages: React.Dispatch<React.SetStateAction<ResolvedImageItem[]>>;
 }
 
 const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {

@@ -10,7 +10,6 @@ interface TierItem {
 
 interface StoredImage {
 	id: number;
-	url: string;
 	text?: string;
 }
 
@@ -361,7 +360,7 @@ export const collectFullResolutionManifest = async (
 		for (let itemIndex = 0; itemIndex < tierImages.length; itemIndex += 1) {
 			const image = tierImages[itemIndex];
 			const originalData = await getOriginalImageData(image.id);
-			const dataUrl = originalData ?? image.url;
+			const dataUrl = originalData ?? "";
 			const { mimeType } = splitDataUrl(dataUrl);
 			const extension = mimeTypeToExtension(mimeType);
 			const filename = `${padIndex(itemIndex + 1)}.${extension}`;
@@ -388,7 +387,7 @@ export const collectFullResolutionManifest = async (
 	for (let itemIndex = 0; itemIndex < unassignedImages.length; itemIndex += 1) {
 		const image = unassignedImages[itemIndex];
 		const originalData = await getOriginalImageData(image.id);
-		const dataUrl = originalData ?? image.url;
+		const dataUrl = originalData ?? "";
 		const { mimeType } = splitDataUrl(dataUrl);
 		const extension = mimeTypeToExtension(mimeType);
 		const filename = `${padIndex(itemIndex + 1)}.${extension}`;
