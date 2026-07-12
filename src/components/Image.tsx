@@ -1,5 +1,6 @@
-import React, { useState, useContext, useEffect, useRef } from "react";
-import { StylingContext } from "../App";
+import React, { useState, useEffect, useRef } from "react";
+import { useStyling } from "../context/StylingContext";
+import { useContextMenu } from "../hooks/useContextMenu";
 
 interface ImageWithContextMenuProps {
 	imageId: number;
@@ -9,6 +10,8 @@ interface ImageWithContextMenuProps {
 	onEditText: (imageId: number, nextText: string) => void;
 }
 
+const IMAGE_CONTEXT_MENU_DEFAULT_SIZE = { width: 160, height: 96 };
+
 const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	imageId,
 	imageUrl,
@@ -17,34 +20,15 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	onEditText
 }) => {
 	const [isHovered, setIsHovered] = useState(false);
-	const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 	const [isTextModalOpen, setIsTextModalOpen] = useState(false);
 	const [draftText, setDraftText] = useState(imageText ?? "");
-	const [contextMenuPosition, setContextMenuPosition] = useState({ left: 0, top: 0 });
-	const { style } = useContext(StylingContext) || {};
-	const contextMenuRef = useRef<HTMLDivElement>(null);
+	const { style } = useStyling();
+	const contextMenu = useContextMenu(IMAGE_CONTEXT_MENU_DEFAULT_SIZE);
 	const textInputRef = useRef<HTMLTextAreaElement>(null);
 
 	useEffect(() => {
 		setDraftText(imageText ?? "");
 	}, [imageText]);
-
-	useEffect(() => {
-		const handleOutsideClick = (event: MouseEvent) => {
-			if (
-				isContextMenuOpen &&
-				contextMenuRef.current &&
-				!contextMenuRef.current.contains(event.target as Node)
-			) {
-				setIsContextMenuOpen(false);
-			}
-		};
-
-		window.addEventListener("click", handleOutsideClick);
-		return () => {
-			window.removeEventListener("click", handleOutsideClick);
-		};
-	}, [isContextMenuOpen]);
 
 	useEffect(() => {
 		if (!isTextModalOpen) {
@@ -62,32 +46,10 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 		setIsHovered(false);
 	};
 
-	const handleContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
-		event.preventDefault();
-		setIsContextMenuOpen(true);
-		setContextMenuPosition({ left: event.clientX, top: event.clientY });
-	};
-
-	const calculateContextMenuPosition = () => {
-		const menuWidth = contextMenuRef.current?.offsetWidth || 160;
-		const menuHeight = contextMenuRef.current?.offsetHeight || 96;
-		let left = contextMenuPosition.left;
-		let top = contextMenuPosition.top;
-
-		if (left + menuWidth > window.innerWidth) {
-			left = window.innerWidth - menuWidth - 10;
-		}
-		if (top + menuHeight > window.innerHeight) {
-			top = window.innerHeight - menuHeight - 10;
-		}
-
-		return { left, top };
-	};
-
 	const openTextModal = () => {
 		setDraftText(imageText ?? "");
 		setIsTextModalOpen(true);
-		setIsContextMenuOpen(false);
+		contextMenu.close();
 	};
 
 	const closeTextModal = () => {
@@ -121,7 +83,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 				className="relative"
 				onMouseEnter={handleMouseEnter}
 				onMouseLeave={handleMouseLeave}
-				onContextMenu={handleContextMenu}
+				onContextMenu={contextMenu.open}
 			>
 				<img
 					src={imageUrl}
@@ -157,11 +119,11 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 				)}
 			</div>
 
-			{isContextMenuOpen && (
+			{contextMenu.isOpen && (
 				<div
-					ref={contextMenuRef}
+					ref={contextMenu.menuRef}
 					className="fixed bg-zinc-800 text-white rounded-md shadow-2xl z-20 py-1 min-w-[10rem]"
-					style={{ ...calculateContextMenuPosition() }}
+					style={{ ...contextMenu.position }}
 				>
 					<button
 						type="button"
@@ -175,7 +137,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 						className="block w-full text-left px-3 py-2 text-red-400 hover:bg-zinc-700"
 						onClick={() => {
 							onDelete(imageId);
-							setIsContextMenuOpen(false);
+							contextMenu.close();
 						}}
 					>
 						Delete Image

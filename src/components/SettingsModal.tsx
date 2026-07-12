@@ -1,27 +1,20 @@
-import React, { FormEvent, useContext, useState } from "react";
-import { StylingContext, TierContext } from "../App";
+import React, { FormEvent, useState } from "react";
 import { toBlob } from 'html-to-image';
-import { clearAllImageStores } from "../utils/imageStore";
-import {
-	buildExportZip,
-	buildSpreadsheetExport,
-	collectFullResolutionManifest,
-} from "../utils/exportUtils";
-
-interface ImageItem {
-	id: number;
-	url: string;
-}
+import { useStyling } from "../context/StylingContext";
+import { useTiers } from "../context/TierContext";
+import { imageRepository } from "../persistence/ImageRepository";
+import { collectFullResolutionManifest } from "../services/export/exportManifestBuilder";
+import { buildExportZip } from "../services/export/zipExporter";
+import { buildSpreadsheetExport } from "../services/export/spreadsheetExporter";
 
 interface ModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	setImages: React.Dispatch<React.SetStateAction<ImageItem[]>>;
 }
 
 const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
-	const { style, setStyle } = useContext(StylingContext);
-	const { tiers } = useContext(TierContext);
+	const { style, setStyle } = useStyling();
+	const { tiers } = useTiers();
 	const [selectedStyle, setSelectedStyle] = useState(style);
 	const [isCopying, setIsCopying] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
@@ -79,7 +72,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 
 	const handleClearLocalStorage = async () => {
 		localStorage.clear();
-		await clearAllImageStores();
+		await imageRepository.clearAll();
 		onClose();
 		window.location.reload();
 	};

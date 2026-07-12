@@ -30,27 +30,6 @@
 		"lint": "eslint src",
 		"lint:fix": "eslint src --fix"
 	},
-	"eslintConfig": {
-		"extends": [
-			"react-app",
-			"react-app/jest"
-		],
-		"rules": {
-			"indent": [
-				"error",
-				"tab"
-			],
-			"react/jsx-indent": [
-				"error",
-				"tab"
-			],
-			"react/jsx-indent-props": [
-				"error",
-				"tab"
-			],
-			"no-mixed-spaces-and-tabs": "error"
-		}
-	},
 	"browserslist": {
 		"production": [
 			">0.2%",

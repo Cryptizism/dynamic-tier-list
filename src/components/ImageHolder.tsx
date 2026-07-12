@@ -1,35 +1,23 @@
-import { useState, useEffect, useContext, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ReactSortable } from "react-sortablejs";
 import SettingsModal from "./SettingsModal";
 import Image from "./Image";
-import { StylingContext } from "../App";
-import {
-	getImageStore,
-	migrateImageStoresFromLocalStorage,
-	deleteOriginalImageData,
-	setOriginalImageData,
-	setImageStore,
-	getFullResolutionImages,
-	resizeStoredImages,
-	resizeImageDataUrl,
-} from "../utils/imageStore";
-
-interface ImageItem {
-	id: number;
-	url: string;
-	text?: string;
-}
+import { useStyling } from "../context/StylingContext";
+import { useResponsivePixelSize } from "../hooks/useResponsivePixelSize";
+import { useImageList } from "../hooks/useImageList";
+import { ImageRepository } from "../persistence/ImageRepository";
 
 const ImageHolder = () => {
-	const { style } = useContext(StylingContext);
+	const { style } = useStyling();
+	const { pixelSize, isRefreshOnlyRef } = useResponsivePixelSize(style.size);
 
-	const [images, setImages] = useState<ImageItem[]>([]);
-	const [hasHydratedImages, setHasHydratedImages] = useState(false);
-	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [previewPixelSize, setPreviewPixelSize] = useState(() =>
-		Math.max(1, Math.round(style.size * (window.devicePixelRatio || 1)))
+	const { images, setImages, addImage, deleteImage, editImageText } = useImageList(
+		ImageRepository.IMAGE_HOLDER_LIST_KEY,
+		{ size: pixelSize, quality: style.quality, pasteScaleMode: style.pasteScaleMode },
+		isRefreshOnlyRef,
 	);
-	const isPreviewRefreshRef = useRef(false);
+
+	const [isModalOpen, setIsModalOpen] = useState(false);
 
 	const openModal = () => {
 		setIsModalOpen(true);
@@ -38,72 +26,6 @@ const ImageHolder = () => {
 	const closeModal = () => {
 		setIsModalOpen(false);
 	};
-
-	const getPreviewPixelSize = useCallback(
-		() => Math.max(1, Math.round(style.size * (window.devicePixelRatio || 1))),
-		[style.size]
-	);
-
-	useEffect(() => {
-		let debounceHandle: number | undefined;
-
-		const schedulePreviewRefresh = () => {
-			if (debounceHandle !== undefined) {
-				window.clearTimeout(debounceHandle);
-			}
-
-			debounceHandle = window.setTimeout(() => {
-				setPreviewPixelSize((currentValue) => {
-					const nextValue = getPreviewPixelSize();
-					if (currentValue === nextValue) {
-						isPreviewRefreshRef.current = false;
-						return currentValue;
-					}
-					isPreviewRefreshRef.current = true;
-					return nextValue;
-				});
-			}, 150);
-		};
-
-		setPreviewPixelSize(getPreviewPixelSize());
-		window.addEventListener("resize", schedulePreviewRefresh);
-		window.addEventListener("scroll", schedulePreviewRefresh, { passive: true });
-		window.visualViewport?.addEventListener("resize", schedulePreviewRefresh);
-		window.visualViewport?.addEventListener("scroll", schedulePreviewRefresh, { passive: true });
-
-		return () => {
-			if (debounceHandle !== undefined) {
-				window.clearTimeout(debounceHandle);
-			}
-
-			window.removeEventListener("resize", schedulePreviewRefresh);
-			window.removeEventListener("scroll", schedulePreviewRefresh);
-			window.visualViewport?.removeEventListener("resize", schedulePreviewRefresh);
-			window.visualViewport?.removeEventListener("scroll", schedulePreviewRefresh);
-		};
-	}, [getPreviewPixelSize]);
-
-	const storeImportedImage = useCallback(
-		async (imageId: number, originalDataUrl: string) => {
-			try {
-				await setOriginalImageData({ id: imageId, url: originalDataUrl });
-			} catch (error) {
-				console.error("Failed to save original image data:", error);
-			}
-
-			const previewImageData = await resizeImageDataUrl(originalDataUrl, {
-				size: previewPixelSize,
-				quality: style.quality,
-				pasteScaleMode: style.pasteScaleMode,
-			});
-
-			setImages((prevImages) => [
-				...prevImages,
-				{ id: imageId, url: previewImageData, text: "" }
-			]);
-		},
-		[previewPixelSize, style.pasteScaleMode, style.quality]
-	);
 
 	const handleDrop = useCallback(
 		(event: DragEvent) => {
@@ -122,7 +44,7 @@ const ImageHolder = () => {
 						reader.onload = (readerEvent) => {
 							const result = readerEvent.target?.result;
 							if (typeof result === "string") {
-								void storeImportedImage(time + index, result);
+								void addImage(time + index, result);
 							}
 						};
 						reader.readAsDataURL(file);
@@ -130,25 +52,12 @@ const ImageHolder = () => {
 				}
 			}
 		},
-		[storeImportedImage]
+		[addImage]
 	);
 
 	const dragStart = useCallback((event: DragEvent) => {
 		if (event.dataTransfer == null) return;
 		event.dataTransfer.setData("application/x-tier", "true");
-	}, []);
-
-	const handleDeleteImage = useCallback((imageId: number) => {
-		deleteOriginalImageData(imageId).catch((error) => {
-			console.error("Failed to delete original image data:", error);
-		});
-		setImages((prevImages) => prevImages.filter((img) => img.id !== imageId));
-	}, []);
-
-	const handleEditImageText = useCallback((imageId: number, nextText: string) => {
-		setImages((prevImages) =>
-			prevImages.map((img) => (img.id === imageId ? { ...img, text: nextText } : img))
-		);
 	}, []);
 
 	const handlePaste = useCallback(
@@ -168,38 +77,13 @@ const ImageHolder = () => {
 				reader.onloadend = (readerEvent) => {
 					const result = typeof readerEvent.target?.result === "string" ? readerEvent.target.result : null;
 					if (result) {
-						void storeImportedImage(time + i, result);
+						void addImage(time + i, result);
 					}
 				};
 			}
 		},
-		[storeImportedImage]
+		[addImage]
 	);
-
-	useEffect(() => {
-		let isMounted = true;
-
-		const loadImages = async () => {
-			await migrateImageStoresFromLocalStorage();
-			const storedImages = await getImageStore("imageHolder");
-			const resizedImages = await resizeStoredImages(storedImages, {
-				size: previewPixelSize,
-				quality: style.quality,
-				pasteScaleMode: style.pasteScaleMode,
-			});
-			if (isMounted) {
-				isPreviewRefreshRef.current = false;
-				setImages(resizedImages);
-				setHasHydratedImages(true);
-			}
-		};
-
-		loadImages();
-
-		return () => {
-			isMounted = false;
-		};
-	}, [previewPixelSize, style.pasteScaleMode, style.quality, style.size]);
 
 	useEffect(() => {
 		const dragOver = (event: DragEvent) => {
@@ -223,30 +107,6 @@ const ImageHolder = () => {
 			document.removeEventListener("drop", drop);
 		};
 	}, [handlePaste, dragStart, handleDrop]);
-
-	useEffect(() => {
-		if (!hasHydratedImages) {
-			return;
-		}
-
-		if (isPreviewRefreshRef.current) {
-			isPreviewRefreshRef.current = false;
-			return;
-		}
-
-		const persistImages = async () => {
-			try {
-				const fullResolutionImages = await getFullResolutionImages(images);
-				await setImageStore("imageHolder", fullResolutionImages);
-			} catch (error) {
-				window.alert("Failed to save images locally. You can try deleting some images or clearing local storage in settings.");
-				console.error("Failed to save images to IndexedDB:", error);
-			}
-		};
-
-		persistImages();
-	}, [images, hasHydratedImages]);
-
 
 	return (
 		<div className="bg-stone-700 flex">
@@ -274,8 +134,8 @@ const ImageHolder = () => {
 								imageId={image.id}
 								imageUrl={image.url}
 								imageText={image.text}
-								onDelete={handleDeleteImage}
-								onEditText={handleEditImageText}
+								onDelete={deleteImage}
+								onEditText={editImageText}
 							/>
 						))}
 					</ReactSortable>
@@ -302,7 +162,7 @@ const ImageHolder = () => {
 					/>
 				</svg>
 			</button>
-			<SettingsModal isOpen={isModalOpen} onClose={closeModal} setImages={setImages} />
+			<SettingsModal isOpen={isModalOpen} onClose={closeModal} />
 		</div>
 	);
 };

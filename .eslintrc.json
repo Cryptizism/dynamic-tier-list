@@ -1,0 +1,29 @@
+{
+	"root": true,
+	"extends": ["react-app", "react-app/jest"],
+	"rules": {
+		"indent": ["error", "tab"],
+		"react/jsx-indent": ["error", "tab"],
+		"react/jsx-indent-props": ["error", "tab"],
+		"no-mixed-spaces-and-tabs": "error"
+	},
+	"overrides": [
+		{
+			"files": ["**/*.ts", "**/*.tsx"],
+			"rules": {
+				"@typescript-eslint/naming-convention": [
+					"warn",
+					{ "selector": "typeLike", "format": ["PascalCase"] },
+					{ "selector": "enumMember", "format": ["PascalCase", "UPPER_CASE"] },
+					{ "selector": "variable", "format": ["camelCase", "PascalCase", "UPPER_CASE"], "leadingUnderscore": "allow" },
+					{ "selector": "function", "format": ["camelCase", "PascalCase"] },
+					{ "selector": "parameter", "format": ["camelCase"], "leadingUnderscore": "allow" },
+					{ "selector": "classProperty", "modifiers": ["static", "readonly"], "format": ["UPPER_CASE", "camelCase"] },
+					{ "selector": "classProperty", "format": ["camelCase"] },
+					{ "selector": "classMethod", "format": ["camelCase"] },
+					{ "selector": "class", "format": ["PascalCase"] }
+				]
+			}
+		}
+	]
+}

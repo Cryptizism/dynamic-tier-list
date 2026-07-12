@@ -1,15 +1,15 @@
-import { useContext } from "react";
-import Tier from "./Tier";
 import { ReactSortable } from "react-sortablejs";
-import { TierContext } from "../App";
-import { deleteImageStore } from "../utils/imageStore";
+import Tier from "./Tier";
+import { useTiers } from "../context/TierContext";
+import { ImageRepository, imageRepository } from "../persistence/ImageRepository";
+import { Tier as TierModel } from "../types/domain";
 
 const TierList = () => {
-	const { tiers, setTiers } = useContext(TierContext);
+	const { tiers, setTiers } = useTiers();
 
-	const deleteTier = (id: number) => {
+	const deleteTier = (id: TierModel["id"]) => {
 		const updatedTiers = tiers.filter((tier) => tier.id !== id);
-		deleteImageStore(`tierImages_${id}`).catch((error) => {
+		imageRepository.deleteList(ImageRepository.tierListKey(id)).catch((error) => {
 			console.error("Failed to delete tier images from IndexedDB:", error);
 		});
 		setTiers(updatedTiers);

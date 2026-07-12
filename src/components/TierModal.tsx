@@ -1,6 +1,7 @@
-import React, { useState, ChangeEvent, FormEvent, useContext } from "react";
-import { SketchPicker } from "react-color";
-import { StylingContext, TierContext } from "../App";
+import React, { useState, ChangeEvent, FormEvent } from "react";
+import { SketchPicker, ColorResult } from "react-color";
+import { useStyling } from "../context/StylingContext";
+import { useTiers } from "../context/TierContext";
 
 interface ModalProps {
 	isOpen: boolean;
@@ -9,9 +10,9 @@ interface ModalProps {
 }
 
 export const AddTierButton: React.FC = () => {
-	const { style } = useContext(StylingContext);
-	const { setTiers } = useContext(TierContext);
-	
+	const { style } = useStyling();
+	const { setTiers } = useTiers();
+
 	const [isModalOpen, setIsModalOpen] = useState(false);
 
 	const openModal = () => {
@@ -49,7 +50,7 @@ export const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) 
 		setTierLabel(event.target.value);
 	};
 
-	const handleColorChange = (newColor: any) => {
+	const handleColorChange = (newColor: ColorResult) => {
 		setColor(newColor.hex);
 	};
 
@@ -136,4 +137,3 @@ export const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) 
 		</div>
 	);
 };
-
