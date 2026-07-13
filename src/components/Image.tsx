@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
+import { PenLine, Trash2, XCircle } from "lucide-react";
 import { useStyling } from "../context/StylingContext";
 import { useContextMenu } from "../hooks/useContextMenu";
+import { ContextMenuPanel, ContextMenuItem, ContextMenuDivider } from "./ui/ContextMenu";
+import { ModalShell, ModalBody, ModalFooter } from "./ui/Modal";
+import { Button } from "./ui/Button";
 
 interface ImageWithContextMenuProps {
 	imageId: number;
@@ -62,13 +66,6 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 		setIsTextModalOpen(false);
 	};
 
-	const closeTextModalIfBackgroundClick = (event: React.MouseEvent<HTMLDivElement>) => {
-		const target = event.target as HTMLElement;
-		if (target.id === "image-text-modal-bg") {
-			closeTextModal();
-		}
-	};
-
 	const handleDraftTextKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		if (event.key === "Enter" && !event.shiftKey) {
 			event.preventDefault();
@@ -103,84 +100,57 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 						className="absolute top-0 right-0 p-1 cursor-pointer text-red-500"
 						onClick={() => onDelete(imageId)}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="currentColor"
-							className="w-4 h-4"
-						>
-							<path
-								fillRule="evenodd"
-								d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z"
-								clipRule="evenodd"
-							/>
-						</svg>
+						<XCircle className="w-4 h-4" fill="currentColor" stroke="white" strokeWidth={1} />
 					</div>
 				)}
 			</div>
 
 			{contextMenu.isOpen && (
-				<div
-					ref={contextMenu.menuRef}
-					className="fixed bg-zinc-800 text-white rounded-md shadow-2xl z-20 py-1 min-w-[10rem]"
-					style={{ ...contextMenu.position }}
-				>
-					<button
-						type="button"
-						className="block w-full text-left px-3 py-2 hover:bg-zinc-700"
-						onClick={openTextModal}
-					>
+				<ContextMenuPanel menuRef={contextMenu.menuRef} position={contextMenu.position} className="py-1">
+					<ContextMenuItem icon={<PenLine className="h-4 w-4 text-zinc-400" />} onClick={openTextModal}>
 						Edit Text
-					</button>
-					<button
-						type="button"
-						className="block w-full text-left px-3 py-2 text-red-400 hover:bg-zinc-700"
+					</ContextMenuItem>
+					<ContextMenuDivider />
+					<ContextMenuItem
+						icon={<Trash2 className="h-4 w-4" />}
+						danger
 						onClick={() => {
 							onDelete(imageId);
 							contextMenu.close();
 						}}
 					>
 						Delete Image
-					</button>
-				</div>
+					</ContextMenuItem>
+				</ContextMenuPanel>
 			)}
 
-			{isTextModalOpen && (
-				<div
-					id="image-text-modal-bg"
-					className="fixed inset-0 flex items-center justify-center z-30 bg-black bg-opacity-50 dark:bg-opacity-70"
-					onMouseDown={closeTextModalIfBackgroundClick}
-				>
-					<div className="bg-zinc-800 p-6 rounded-md shadow-md w-[28rem] max-w-[90vw]">
-						<h2 className="text-lg font-semibold mb-4 text-white">Edit Image Text</h2>
-						<form onSubmit={saveText}>
-							<textarea
-								ref={textInputRef}
-								className="w-full h-24 p-2 border rounded-md text-black"
-								placeholder="Type caption text"
-								value={draftText}
-								onChange={(event) => setDraftText(event.target.value)}
-								onKeyDown={handleDraftTextKeyDown}
-							/>
-							<div className="flex justify-end mt-4">
-								<button
-									type="button"
-									className="mr-2 px-4 py-2 text-gray-400 hover:text-gray-100"
-									onClick={closeTextModal}
-								>
-									Cancel
-								</button>
-								<button
-									type="submit"
-									className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-								>
-									Save
-								</button>
-							</div>
-						</form>
-					</div>
-				</div>
-			)}
+			<ModalShell
+				isOpen={isTextModalOpen}
+				onClose={closeTextModal}
+				title="Edit Image Text"
+				icon={<PenLine className="h-5 w-5" />}
+			>
+				<form onSubmit={saveText} className="flex min-h-0 flex-1 flex-col">
+					<ModalBody>
+						<textarea
+							ref={textInputRef}
+							className="w-full h-24 resize-none rounded-md border border-zinc-600 bg-zinc-900 p-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+							placeholder="Type caption text"
+							value={draftText}
+							onChange={(event) => setDraftText(event.target.value)}
+							onKeyDown={handleDraftTextKeyDown}
+						/>
+					</ModalBody>
+					<ModalFooter>
+						<Button type="button" variant="ghost" onClick={closeTextModal}>
+							Cancel
+						</Button>
+						<Button type="submit" variant="primary">
+							Save
+						</Button>
+					</ModalFooter>
+				</form>
+			</ModalShell>
 		</>
 	);
 };

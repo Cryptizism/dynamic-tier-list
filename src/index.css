@@ -13,3 +13,80 @@
 .stretch{
 	object-fit: fill;
 }
+
+@keyframes overlay-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@keyframes modal-in {
+	from { opacity: 0; transform: translateY(8px) scale(0.98); }
+	to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes menu-in {
+	from { opacity: 0; transform: scale(0.96); }
+	to { opacity: 1; transform: scale(1); }
+}
+
+.animate-overlay-in {
+	animation: overlay-in 0.15s ease-out;
+}
+
+.animate-modal-in {
+	animation: modal-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-menu-in {
+	animation: menu-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+	transform-origin: top left;
+}
+
+.slim-scrollbar::-webkit-scrollbar {
+	width: 8px;
+}
+.slim-scrollbar::-webkit-scrollbar-track {
+	background: transparent;
+}
+.slim-scrollbar::-webkit-scrollbar-thumb {
+	background-color: rgb(63 63 70);
+	border-radius: 9999px;
+}
+.slim-scrollbar::-webkit-scrollbar-thumb:hover {
+	background-color: rgb(82 82 91);
+}
+
+input[type="range"].styled-range {
+	-webkit-appearance: none;
+	appearance: none;
+	height: 6px;
+	border-radius: 9999px;
+	background: rgb(63 63 70);
+	outline: none;
+}
+input[type="range"].styled-range::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 16px;
+	height: 16px;
+	border-radius: 9999px;
+	background: rgb(99 102 241);
+	cursor: pointer;
+	border: 2px solid white;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	margin-top: -5px;
+}
+input[type="range"].styled-range::-moz-range-thumb {
+	width: 16px;
+	height: 16px;
+	border-radius: 9999px;
+	background: rgb(99 102 241);
+	cursor: pointer;
+	border: 2px solid white;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+input[type="range"].styled-range::-moz-range-track {
+	height: 6px;
+	border-radius: 9999px;
+	background: rgb(63 63 70);
+}

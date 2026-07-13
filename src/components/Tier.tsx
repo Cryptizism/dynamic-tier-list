@@ -1,6 +1,7 @@
 import React from "react";
 import { ReactSortable } from "react-sortablejs";
 import { SketchPicker, ColorResult } from "react-color";
+import { Palette, SlidersHorizontal, Tag, Trash2 } from "lucide-react";
 import Image from "./Image";
 import { useStyling } from "../context/StylingContext";
 import { useTiers } from "../context/TierContext";
@@ -8,6 +9,8 @@ import { useResponsivePixelSize } from "../hooks/useResponsivePixelSize";
 import { useImageList } from "../hooks/useImageList";
 import { useContextMenu } from "../hooks/useContextMenu";
 import { ImageRepository, imageRepository } from "../persistence/ImageRepository";
+import { ContextMenuPanel, ContextMenuHeader, ContextMenuItem } from "./ui/ContextMenu";
+import { FieldLabel, textInputClass } from "./ui/FormControls";
 
 interface TierProps {
 	id: number;
@@ -16,7 +19,7 @@ interface TierProps {
 	onDelete: () => void;
 }
 
-const TIER_CONTEXT_MENU_DEFAULT_SIZE = { width: 236, height: 402 };
+const TIER_CONTEXT_MENU_DEFAULT_SIZE = { width: 236, height: 460 };
 
 const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 	const { style } = useStyling();
@@ -92,18 +95,17 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 			</ReactSortable>
 
 			{contextMenu.isOpen && (
-				<div
-					ref={contextMenu.menuRef}
-					className="fixed bg-zinc-800 text-white p-2 rounded-md shadow-2xl z-10"
-					style={{
-						...contextMenu.position,
-					}}
-					id="context-menu"
+				<ContextMenuPanel
+					menuRef={contextMenu.menuRef}
+					position={contextMenu.position}
+					widthClassName="w-[236px]"
+					className="z-10"
 				>
-					<div>
-						<label className="block text-gray-300 font-semibold">
-							Edit Color
-						</label>
+					<ContextMenuHeader icon={<SlidersHorizontal className="h-4 w-4" />}>
+						Tier Options
+					</ContextMenuHeader>
+					<div className="p-3">
+						<FieldLabel icon={<Palette className="h-3.5 w-3.5" />}>Color</FieldLabel>
 						<SketchPicker
 							color={editedColor}
 							onChange={handleColorChange}
@@ -117,29 +119,38 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 								"#7FFF7F"
 							]}
 							className="text-black"
+							styles={{
+								default: {
+									picker: {
+										background: "#18181b",
+										border: "1px solid #3f3f46",
+										boxShadow: "none",
+										borderRadius: "0.5rem",
+										width: "auto",
+									},
+								},
+							}}
 						/>
 					</div>
-					<div>
-						<label className="block text-gray-300 font-semibold">
-							Edit Name
-						</label>
+					<div className="px-3 pb-3">
+						<FieldLabel htmlFor="tier-label-input" icon={<Tag className="h-3.5 w-3.5" />}>
+							Name
+						</FieldLabel>
 						<input
+							id="tier-label-input"
 							type="text"
 							placeholder="Tier Label"
-							className="mt-1 p-2 w-full border rounded-md focus:ring focus:ring-indigo-300 text-black"
+							className={textInputClass}
 							value={editedTierLabel}
 							onChange={handleTierLabelChange}
 						/>
 					</div>
-					<div>
-						<span
-							className="text-red-500 cursor-pointer"
-							onClick={handleDeleteTier}
-						>
+					<div className="border-t border-zinc-700/80 p-1">
+						<ContextMenuItem icon={<Trash2 className="h-4 w-4" />} danger className="rounded-md" onClick={handleDeleteTier}>
 							Delete Tier
-						</span>
+						</ContextMenuItem>
 					</div>
-				</div>
+				</ContextMenuPanel>
 			)}
 		</div>
 	);

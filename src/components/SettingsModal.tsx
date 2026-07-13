@@ -1,11 +1,28 @@
 import React, { FormEvent, useState } from "react";
 import { toBlob } from 'html-to-image';
+import {
+	Archive,
+	ChevronDown,
+	Copy,
+	Download,
+	FileSpreadsheet,
+	Gauge,
+	Image as ImageIcon,
+	Maximize2,
+	Scaling,
+	Settings2,
+	Trash2,
+} from "lucide-react";
 import { useStyling } from "../context/StylingContext";
 import { useTiers } from "../context/TierContext";
 import { imageRepository } from "../persistence/ImageRepository";
 import { collectFullResolutionManifest } from "../services/export/exportManifestBuilder";
 import { buildExportZip } from "../services/export/zipExporter";
 import { buildSpreadsheetExport } from "../services/export/spreadsheetExporter";
+import { ModalShell, ModalBody, ModalFooter } from "./ui/Modal";
+import { Button } from "./ui/Button";
+import { Section } from "./ui/Section";
+import { SegmentedControl } from "./ui/FormControls";
 
 interface ModalProps {
 	isOpen: boolean;
@@ -63,11 +80,6 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 
 		if (!setStyle) return;
 		setStyle(selectedStyle);
-	};
-
-	const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
-		const target = event.target as HTMLElement;
-		if (target.id === "modal-bg") onClose();
 	};
 
 	const handleClearLocalStorage = async () => {
@@ -221,72 +233,45 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 		}
 	};
 
-	if (!isOpen) {
-		return null;
-	}
+	const exportStatusClasses = isExporting
+		? "border-blue-500/30 bg-blue-500/10 text-blue-300"
+		: exportStatus?.toLowerCase().includes("fail") || exportStatus?.toLowerCase().includes("unavailable")
+			? "border-red-500/30 bg-red-500/10 text-red-300"
+			: exportStatus?.toLowerCase().includes("finished")
+				? "border-green-500/30 bg-green-500/10 text-green-300"
+				: "border-zinc-600/40 bg-zinc-700/30 text-zinc-300";
+
+	const isBusy = isCopying || isSaving || isExporting;
 
 	return (
-		<div
-			className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 dark:bg-opacity-70"
-			id="modal-bg"
-			onClick={handleClick}
+		<ModalShell
+			isOpen={isOpen}
+			onClose={onClose}
+			title="Image Settings"
+			icon={<Settings2 className="h-5 w-5" />}
+			widthClassName="w-[32rem]"
 		>
-			<div className="bg-zinc-800 p-6 rounded-md shadow-md">
-				<h2 className="text-lg font-semibold mb-4 text-white">
-					Image Settings
-				</h2>
-				<form onSubmit={handleSubmit}>
-					<div className="mb-4">
-						<h3 className="block text-sm font-medium text-gray-300">
-							Aspect Ratio
-						</h3>
-						<div className="flex items-center space-x-4 text-gray-300">
-							<label htmlFor="preserve" className="flex items-center">
-								<input
-									type="radio"
-									id="preserve"
-									name="aspectRatio"
-									value="preserve"
-									className="mr-2"
-									checked={selectedStyle.ratio === "preserve"}
-									onChange={() => setSelectedStyle({ ...selectedStyle, ratio: "preserve" })}
-								/>
-								Preserve
-							</label>
-							<label htmlFor="fit" className="flex items-center">
-								<input
-									type="radio"
-									id="fit"
-									name="aspectRatio"
-									value="fit"
-									className="mr-2"
-									checked={selectedStyle.ratio === "fit"}
-									onChange={() => setSelectedStyle({ ...selectedStyle, ratio: "fit" })}
-								/>
-								1:1 Fit
-							</label>
-							<label htmlFor="stretch" className="flex items-center">
-								<input
-									type="radio"
-									id="stretch"
-									name="aspectRatio"
-									value="stretch"
-									className="mr-2"
-									checked={selectedStyle.ratio === "stretch"}
-									onChange={() => setSelectedStyle({ ...selectedStyle, ratio: "stretch" })}
-								/>
-								1:1 Stretch
-							</label>
-						</div>
-					</div>
-					<div className="mb-4">
-						<h3 className="block text-sm font-medium text-gray-300">
-							Image Size (px)
-						</h3>
-						<h4 className="text-gray-400 text-xs font-light mb-2">
-							This will change the size of all images on the site and can influence the image scaling setting
-						</h4>
-						<div className="relative flex items-center w-fit">
+			<form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+				<ModalBody>
+					<Section title="Aspect Ratio" icon={<ImageIcon className="h-4 w-4" />}>
+						<SegmentedControl
+							name="aspectRatio"
+							value={selectedStyle.ratio}
+							onChange={(value) => setSelectedStyle({ ...selectedStyle, ratio: value as typeof selectedStyle.ratio })}
+							options={[
+								{ id: "preserve", value: "preserve", label: "Preserve" },
+								{ id: "fit", value: "fit", label: "1:1 Fit" },
+								{ id: "stretch", value: "stretch", label: "1:1 Stretch" },
+							]}
+						/>
+					</Section>
+
+					<Section
+						title="Image Size"
+						description="Changes the size of all images on the site and can influence the image scaling setting."
+						icon={<Maximize2 className="h-4 w-4" />}
+					>
+						<div className="relative flex w-32 items-center">
 							<input
 								type="number"
 								min={16}
@@ -294,18 +279,17 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 								onChange={(e) =>
 									setSelectedStyle({ ...selectedStyle, size: parseInt(e.target.value) })
 								}
-								className="mt-1 p-2 pr-6 w-full border rounded-md focus:ring focus:ring-indigo-300 text-black"
+								className="w-full rounded-md border border-zinc-600 bg-zinc-900 p-2 pr-8 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
 							/>
-							<span className="absolute right-2 text-gray-400">px</span>
+							<span className="absolute right-2 text-sm text-zinc-500">px</span>
 						</div>
-					</div>
-					<div className="mb-4">
-						<h3 className="block text-sm font-medium text-gray-300">
-							Compression Quality
-						</h3>
-						<h4 className="text-gray-400 text-xs font-light mb-2">
-							100% means no compression.<br />Lowering this will lower storage on your computer but also reduce image quality.
-						</h4>
+					</Section>
+
+					<Section
+						title="Compression Quality"
+						description="100% means no compression. Lowering this reduces storage used on your computer but also reduces image quality."
+						icon={<Gauge className="h-4 w-4" />}
+					>
 						<div className="flex items-center gap-3">
 							<input
 								type="range"
@@ -315,117 +299,68 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 								onChange={(e) =>
 									setSelectedStyle({ ...selectedStyle, quality: parseInt(e.target.value, 10) })
 								}
-								className="w-48"
+								className="styled-range w-full"
 							/>
-							<span className="text-gray-300 min-w-[3rem]">{selectedStyle.quality}%</span>
+							<span className="min-w-[3rem] text-right text-sm text-zinc-300">{selectedStyle.quality}%</span>
 						</div>
-					</div>
-					<div className="mb-4">
-						<h3 className="block text-sm font-medium text-gray-300">
-							Image Scaling
-						</h3>
-						<div className="flex flex-col gap-1 text-gray-300">
-							<label htmlFor="scale-preserve" className="flex items-center">
-								<input
-									type="radio"
-									id="scale-preserve"
-									name="pasteScaleMode"
-									value="preserve"
-									className="mr-2"
-									checked={selectedStyle.pasteScaleMode === "preserve"}
-									onChange={() =>
-										setSelectedStyle({ ...selectedStyle, pasteScaleMode: "preserve" })
-									}
-								/>
-								Preserve original resolution
-							</label>
-							<label htmlFor="scale-fixed" className="flex items-center">
-								<input
-									type="radio"
-									id="scale-fixed"
-									name="pasteScaleMode"
-									value="fixed"
-									className="mr-2"
-									checked={selectedStyle.pasteScaleMode === "fixed"}
-									onChange={() =>
-										setSelectedStyle({ ...selectedStyle, pasteScaleMode: "fixed" })
-									}
-								/>
-								Scale to current image size setting
-							</label>
-						</div>
-					</div>
-					<div className="my-4 flex flex-row gap-2">
-						<button
-							type="button"
-							className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-							onClick={handleClearLocalStorage}
-						>
+					</Section>
+
+					<Section title="Image Scaling" icon={<Scaling className="h-4 w-4" />}>
+						<SegmentedControl
+							name="pasteScaleMode"
+							value={selectedStyle.pasteScaleMode}
+							onChange={(value) => setSelectedStyle({ ...selectedStyle, pasteScaleMode: value as typeof selectedStyle.pasteScaleMode })}
+							options={[
+								{ id: "scale-preserve", value: "preserve", label: "Preserve original" },
+								{ id: "scale-fixed", value: "fixed", label: "Scale to size setting" },
+							]}
+						/>
+					</Section>
+
+					<div className="mb-3 flex flex-row flex-wrap gap-2">
+						<Button variant="danger" icon={<Trash2 className="h-4 w-4" />} onClick={handleClearLocalStorage}>
 							Clear Local Storage
-						</button>
-						<button
-							type="button"
-							disabled={isCopying || isSaving || isExporting}
-							className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-							onClick={handleCopyImage}
-						>
+						</Button>
+						<Button variant="info" icon={<Copy className="h-4 w-4" />} disabled={isBusy} onClick={handleCopyImage}>
 							{isCopying ? "Copying..." : "Copy Image"}
-						</button>
-						<button
-							type="button"
-							disabled={isCopying || isSaving || isExporting}
-							className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
-							onClick={handleSaveImage}
-						>
+						</Button>
+						<Button variant="success" icon={<Download className="h-4 w-4" />} disabled={isBusy} onClick={handleSaveImage}>
 							{isSaving ? "Saving..." : "Save Image"}
-						</button>
+						</Button>
 					</div>
-					<details className="mb-4 bg-zinc-900 rounded-md border border-zinc-700">
-						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-gray-200">
-							Export
+
+					<details className="group mb-3 rounded-lg border border-zinc-700/60 bg-zinc-900/40">
+						<summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-sm font-semibold text-zinc-200">
+							<span>Export</span>
+							<ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
 						</summary>
-						<div className="px-3 pb-3 pt-1 flex flex-row gap-2 flex-wrap">
-							<button
-								type="button"
-								disabled={isCopying || isSaving || isExporting}
-								className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed"
-								onClick={handleExportZip}
-							>
+						<div className="flex flex-row flex-wrap gap-2 px-4 pb-4 pt-1">
+							<Button variant="warning" icon={<Archive className="h-4 w-4" />} disabled={isBusy} onClick={handleExportZip}>
 								{isExporting ? "Exporting..." : "Export Full-Res ZIP"}
-							</button>
-							<button
-								type="button"
-								disabled={isCopying || isSaving || isExporting}
-								className="px-4 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-700 disabled:opacity-60 disabled:cursor-not-allowed"
-								onClick={handleExportSpreadsheet}
-							>
+							</Button>
+							<Button variant="accent" icon={<FileSpreadsheet className="h-4 w-4" />} disabled={isBusy} onClick={handleExportSpreadsheet}>
 								{isExporting ? "Exporting..." : "Export Spreadsheet (XLSX)"}
-							</button>
+							</Button>
 						</div>
 					</details>
+
 					{exportStatus && (
-						<p className="mb-4 text-sm text-gray-300">
+						<p className={`mb-1 rounded-md border px-3 py-2 text-sm ${exportStatusClasses}`}>
 							{exportStatus}
 						</p>
 					)}
-					<div className="flex justify-end">
-						<button
-							type="button"
-							className="mr-2 px-4 py-2 text-gray-400 hover:text-gray-100"
-							onClick={onClose}
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-						>
-							Save
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
+				</ModalBody>
+
+				<ModalFooter>
+					<Button type="button" variant="ghost" onClick={onClose}>
+						Cancel
+					</Button>
+					<Button type="submit" variant="primary">
+						Save
+					</Button>
+				</ModalFooter>
+			</form>
+		</ModalShell>
 	);
 };
 

@@ -1,7 +1,10 @@
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import { SketchPicker, ColorResult } from "react-color";
-import { useStyling } from "../context/StylingContext";
+import { Palette, Plus, Tag, Pencil } from "lucide-react";
 import { useTiers } from "../context/TierContext";
+import { Button } from "./ui/Button";
+import { FieldLabel, textInputClass } from "./ui/FormControls";
+import { ContextMenuPanel, ContextMenuHeader } from "./ui/ContextMenu";
 
 interface ModalProps {
 	isOpen: boolean;
@@ -10,7 +13,6 @@ interface ModalProps {
 }
 
 export const AddTierButton: React.FC = () => {
-	const { style } = useStyling();
 	const { setTiers } = useTiers();
 
 	const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,7 +32,11 @@ export const AddTierButton: React.FC = () => {
 
 	return (
 		<>
-			<button onClick={openModal} className="bg-stone-600 hover:bg-stone-700 text-white font-semibold py-2 px-4 my-4" style={{width: style.size * 1.2}}>
+			<button
+				onClick={openModal}
+				className="flex items-center justify-center gap-2 bg-stone-600 hover:bg-stone-700 text-white font-semibold py-2 px-4 my-4 w-fit transition-colors"
+			>
+				<Plus className="h-4 w-4" />
 				Add Tier
 			</button>
 			<TierModal
@@ -60,7 +66,7 @@ export const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) 
 		onClose();
 	};
 
-	const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+	const handleOverlayMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
 		const target = event.target as HTMLElement;
 		if (target.id === "modal-bg") onClose();
 	};
@@ -71,69 +77,64 @@ export const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) 
 
 	return (
 		<div
-			className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 dark:bg-opacity-70"
 			id="modal-bg"
-			onMouseDown={handleClick}
+			className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+			onMouseDown={handleOverlayMouseDown}
 		>
-			<div className="bg-zinc-800 p-6 rounded-md shadow-md">
-				<h2 className="text-lg font-semibold mb-4 text-white">New Tier</h2>
-				<form autoComplete="false" onSubmit={handleSubmit}>
-					<div className="mb-4">
-						<label
-							htmlFor="tierLabel"
-							className="block text-sm font-medium text-gray-300"
-						>
+			<ContextMenuPanel widthClassName="w-[236px]">
+				<form autoComplete="off" onSubmit={handleSubmit}>
+					<ContextMenuHeader icon={<Pencil className="h-4 w-4" />}>New Tier</ContextMenuHeader>
+					<div className="p-3">
+						<FieldLabel htmlFor="tierLabel" icon={<Tag className="h-3.5 w-3.5" />}>
 							Tier Label
-						</label>
+						</FieldLabel>
 						<input
 							type="text"
 							placeholder="Tier Label"
 							id="tierLabel"
-							className="mt-1 p-2 w-full border rounded-md focus:ring focus:ring-indigo-300 text-black"
+							className={textInputClass}
 							value={tierLabel}
 							onChange={handleTierLabelChange}
 						/>
 					</div>
-					<div className="mb-4">
-						<label
-							htmlFor="color"
-							className="block text-sm font-medium text-gray-300"
-						>
-							Color
-						</label>
-						<div className="mt-1 w-full">
-							<SketchPicker
-								color={color}
-								onChange={handleColorChange}
-								disableAlpha
-								presetColors={[
-									"#FF7F7F",
-									"#FFBF7F",
-									"#FFDF80",
-									"#FFFF7F",
-									"#BFFF7F",
-									"#7FFF7F"
-								]}
-							/>
-						</div>
+					<div className="px-3 pb-3">
+						<FieldLabel icon={<Palette className="h-3.5 w-3.5" />}>Color</FieldLabel>
+						<SketchPicker
+							color={color}
+							onChange={handleColorChange}
+							disableAlpha
+							presetColors={[
+								"#FF7F7F",
+								"#FFBF7F",
+								"#FFDF80",
+								"#FFFF7F",
+								"#BFFF7F",
+								"#7FFF7F"
+							]}
+							className="text-black"
+							styles={{
+								default: {
+									picker: {
+										background: "#18181b",
+										border: "1px solid #3f3f46",
+										boxShadow: "none",
+										borderRadius: "0.5rem",
+										width: "auto",
+									},
+								},
+							}}
+						/>
 					</div>
-					<div className="flex justify-end">
-						<button
-							type="button"
-							className="mr-2 px-4 py-2 text-gray-400 hover:text-gray-100"
-							onClick={onClose}
-						>
+					<div className="flex justify-end gap-2 border-t border-zinc-700/80 p-2">
+						<Button type="button" variant="ghost" onClick={onClose}>
 							Cancel
-						</button>
-						<button
-							type="submit"
-							className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-						>
+						</Button>
+						<Button type="submit" variant="primary">
 							Create
-						</button>
+						</Button>
 					</div>
 				</form>
-			</div>
+			</ContextMenuPanel>
 		</div>
 	);
 };

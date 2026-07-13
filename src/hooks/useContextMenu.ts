@@ -15,6 +15,8 @@ export interface ContextMenuState {
 
 const MENU_VIEWPORT_MARGIN_PX = 10;
 
+let activeMenuClose: (() => void) | null = null;
+
 export const useContextMenu = (defaultSize: ContextMenuSize): ContextMenuState => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [rawPosition, setRawPosition] = useState({ left: 0, top: 0 });
@@ -24,9 +26,25 @@ export const useContextMenu = (defaultSize: ContextMenuSize): ContextMenuState =
 
 	const open = useCallback((event: ReactMouseEvent) => {
 		event.preventDefault();
+		if (activeMenuClose && activeMenuClose !== close) {
+			activeMenuClose();
+		}
+		activeMenuClose = close;
 		setRawPosition({ left: event.clientX, top: event.clientY });
 		setIsOpen(true);
-	}, []);
+	}, [close]);
+
+	useEffect(() => {
+		if (!isOpen) {
+			return;
+		}
+
+		return () => {
+			if (activeMenuClose === close) {
+				activeMenuClose = null;
+			}
+		};
+	}, [isOpen, close]);
 
 	useEffect(() => {
 		const handleOutsideClick = (event: globalThis.MouseEvent) => {
