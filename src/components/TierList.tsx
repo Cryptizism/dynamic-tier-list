@@ -17,6 +17,8 @@ const TierList = () => {
 
 	return (
 		<ReactSortable
+			scroll
+			scrollSpeed={2}
 			list={tiers}
 			setList={setTiers}
 			tag="div"

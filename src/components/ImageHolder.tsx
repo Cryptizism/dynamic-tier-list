@@ -130,58 +130,60 @@ const ImageHolder = () => {
 	return (
 		<div className="flex border-t border-black/20 bg-stone-700">
 			<div className="flex flex-col flex-1">
-				{images.length === 0 ? (
-					<div
-						role="button"
-						tabIndex={0}
-						onClick={openFileExplorer}
-						onKeyDown={(event) => {
-							if (event.key === "Enter" || event.key === " ") {
-								event.preventDefault();
-								openFileExplorer();
-							}
-						}}
-						className="ignore-elements m-4 flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-stone-600 p-6 text-center transition-colors hover:border-stone-500 hover:bg-stone-800/40"
-					>
-						<ImageIcon className="h-8 w-8 text-stone-500" strokeWidth={1.5} />
-						<p className="text-gray-400">
-							Drag & Drop, Copy and Paste, or <span className="font-semibold text-gray-300 underline">click here to browse</span> for images!
-							<br />
-							If this is your first time using this you can right click tiers to edit them and drag them about, clicking the &quot;Add Tier&quot; will add more tiers (duh)
-							<br />
-							<span className="font-semibold text-gray-300">All images are stored locally on your PC and cannot be shared*</span>
-						</p>
-						<input
-							ref={fileInputRef}
-							type="file"
-							accept="image/*"
-							multiple
-							className="hidden"
-							onClick={(event) => event.stopPropagation()}
-							onChange={handleFileInputChange}
-						/>
-					</div>
-				) : (
-					<ReactSortable
-						list={images}
-						setList={setImages}
-						tag="div"
-						group="shared"
-						className="react-sortablejs flex space-x-4 p-4 min-h-[7rem] flex-wrap flex-1 items-center"
-						filter=".ignore-elements"
-					>
-						{images.map((image) => (
-							<Image
-								key={image.id}
-								imageId={image.id}
-								imageUrl={image.url}
-								imageText={image.text}
-								onDelete={deleteImage}
-								onEditText={editImageText}
+				<ReactSortable
+					list={images}
+					setList={setImages}
+					tag="div"
+					group="shared"
+					className="react-sortablejs flex space-x-4 p-4 min-h-[7rem] flex-wrap flex-1 items-center"
+					filter=".ignore-elements"
+				>
+					{images.length === 0 ? (
+						<div
+							role="button"
+							tabIndex={0}
+							onClick={openFileExplorer}
+							onKeyDown={(event) => {
+								if (event.key === "Enter" || event.key === " ") {
+									event.preventDefault();
+									openFileExplorer();
+								}
+							}}
+							className="ignore-elements w-full m-4 flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-stone-600 p-6 text-center transition-colors hover:border-stone-500 hover:bg-stone-800/40"
+						>
+							<ImageIcon className="h-8 w-8 text-stone-500" strokeWidth={1.5} />
+							<p className="text-gray-400">
+								Drag & Drop, Copy and Paste, or <span className="font-semibold text-gray-300 underline">click here to browse</span> for images!
+								<br />
+								If this is your first time using this you can right click tiers to edit them and drag them about, clicking the &quot;Add Tier&quot; will add more tiers (duh)
+								<br />
+								<span className="font-semibold text-gray-300">All images are stored locally on your PC and cannot be shared*</span>
+							</p>
+							<input
+								ref={fileInputRef}
+								type="file"
+								accept="image/*"
+								multiple
+								className="hidden"
+								onClick={(event) => event.stopPropagation()}
+								onChange={handleFileInputChange}
 							/>
-						))}
-					</ReactSortable>
-				)}
+						</div>
+					) : (
+						<>
+							{images.map((image) => (
+								<Image
+									key={image.id}
+									imageId={image.id}
+									imageUrl={image.url}
+									imageText={image.text}
+									onDelete={deleteImage}
+									onEditText={editImageText}
+								/>
+							))}
+						</>
+					)}
+				</ReactSortable>
 			</div>
 			<button
 				type="button"
