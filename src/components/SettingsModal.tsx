@@ -24,12 +24,23 @@ import { buildSpreadsheetExport } from "../services/export/spreadsheetExporter";
 import { ModalShell, ModalBody, ModalFooter } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { Section } from "./ui/Section";
-import { SegmentedControl } from "./ui/FormControls";
+import { SegmentedControl, SegmentedControlWithHover } from "./ui/FormControls";
 
 interface ModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 }
+
+type AspectRatioStyle = "preserve" | "fit" | "stretch";
+
+const AspectRatioPreviewImage: React.FC<{ ratio: AspectRatioStyle }> = ({ ratio }) => (
+	<img
+		src="/graggle-long.jpg"
+		alt="A plush monkey called Graggle Chimpson the Third"
+		style={{ height: "128px", width: "128px" }}
+		className={`mx-auto ${ratio}`}
+	/>
+);
 
 const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 	const { style, setStyle } = useStyling();
@@ -290,14 +301,14 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 			<form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
 				<ModalBody>
 					<Section title="Aspect Ratio" icon={<ImageIcon className="h-4 w-4" />}>
-						<SegmentedControl
+						<SegmentedControlWithHover
 							name="aspectRatio"
 							value={selectedStyle.ratio}
 							onChange={(value) => setSelectedStyle({ ...selectedStyle, ratio: value as typeof selectedStyle.ratio })}
 							options={[
-								{ id: "preserve", value: "preserve", label: "Preserve" },
-								{ id: "fit", value: "fit", label: "1:1 Fit" },
-								{ id: "stretch", value: "stretch", label: "1:1 Stretch" },
+								{ id: "preserve", value: "preserve", label: "Preserve", hoverElement: <AspectRatioPreviewImage ratio="preserve" /> },
+								{ id: "fit", value: "fit", label: "1:1 Fit", hoverElement: <AspectRatioPreviewImage ratio="fit" /> },
+								{ id: "stretch", value: "stretch", label: "1:1 Stretch", hoverElement: <AspectRatioPreviewImage ratio="stretch" /> },
 							]}
 						/>
 					</Section>
@@ -341,7 +352,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 						</div>
 					</Section>
 
-					<Section title="Image Scaling" icon={<Scaling className="h-4 w-4" />}>
+					<Section title="Image Scaling" description="The size at which images are stored on your device (only works on newly imported images)" icon={<Scaling className="h-4 w-4" />}>
 						<SegmentedControl
 							name="pasteScaleMode"
 							value={selectedStyle.pasteScaleMode}
