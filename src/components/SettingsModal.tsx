@@ -1,4 +1,4 @@
-import React, { FormEvent, useState } from "react";
+import React, { ChangeEvent, FormEvent, useRef, useState } from "react";
 import { toBlob } from 'html-to-image';
 import {
 	Archive,
@@ -12,12 +12,14 @@ import {
 	Scaling,
 	Settings2,
 	Trash2,
+	Upload,
 } from "lucide-react";
 import { useStyling } from "../context/StylingContext";
 import { useTiers } from "../context/TierContext";
 import { imageRepository } from "../persistence/ImageRepository";
 import { collectFullResolutionManifest } from "../services/export/exportManifestBuilder";
 import { buildExportZip } from "../services/export/zipExporter";
+import { importManifestIntoRepository, readManifestFromZip } from "../services/export/zipImporter";
 import { buildSpreadsheetExport } from "../services/export/spreadsheetExporter";
 import { ModalShell, ModalBody, ModalFooter } from "./ui/Modal";
 import { Button } from "./ui/Button";
@@ -31,12 +33,14 @@ interface ModalProps {
 
 const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 	const { style, setStyle } = useStyling();
-	const { tiers } = useTiers();
+	const { tiers, setTiers } = useTiers();
 	const [selectedStyle, setSelectedStyle] = useState(style);
 	const [isCopying, setIsCopying] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [isExporting, setIsExporting] = useState(false);
+	const [isImporting, setIsImporting] = useState(false);
 	const [exportStatus, setExportStatus] = useState<string | null>(null);
+	const importFileInputRef = useRef<HTMLInputElement>(null);
 	const CLIPBOARD_LIMIT_BYTES = 8 * 1024 * 1024;
 
 	const waitForPaint = () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))); // Without setTimeout it doesn't work? LAME ASS CODE
@@ -233,6 +237,38 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 		}
 	};
 
+	const handleImportButtonClick = () => {
+		if (isCopying || isSaving || isExporting || isImporting) return;
+		importFileInputRef.current?.click();
+	};
+
+	const handleImportZipSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+
+		const confirmed = window.confirm(
+			"Importing a tier list replaces all current tiers and images. This cannot be undone. Continue?",
+		);
+		if (!confirmed) return;
+
+		setIsImporting(true);
+		setExportStatus("Reading manifest from ZIP...");
+
+		try {
+			const manifest = await readManifestFromZip(file);
+			setExportStatus(`Reading ${manifest.length} image${manifest.length === 1 ? "" : "s"} from ZIP...`);
+			const importedTiers = await importManifestIntoRepository(manifest);
+			setTiers(importedTiers);
+			setExportStatus("Import finished. Reloading...");
+			window.location.reload();
+		} catch (error) {
+			console.error("Failed to import tier list from ZIP:", error);
+			setExportStatus(error instanceof Error ? error.message : "Import failed. Check browser console for details.");
+			setIsImporting(false);
+		}
+	};
+
 	const exportStatusClasses = isExporting
 		? "border-blue-500/30 bg-blue-500/10 text-blue-300"
 		: exportStatus?.toLowerCase().includes("fail") || exportStatus?.toLowerCase().includes("unavailable")
@@ -241,7 +277,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 				? "border-green-500/30 bg-green-500/10 text-green-300"
 				: "border-zinc-600/40 bg-zinc-700/30 text-zinc-300";
 
-	const isBusy = isCopying || isSaving || isExporting;
+	const isBusy = isCopying || isSaving || isExporting || isImporting;
 
 	return (
 		<ModalShell
@@ -312,7 +348,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 							onChange={(value) => setSelectedStyle({ ...selectedStyle, pasteScaleMode: value as typeof selectedStyle.pasteScaleMode })}
 							options={[
 								{ id: "scale-preserve", value: "preserve", label: "Preserve original" },
-								{ id: "scale-fixed", value: "fixed", label: "Scale to size setting" },
+								{ id: "scale-fixed", value: "fixed", label: "Scale to \"Image Size\"" },
 							]}
 						/>
 					</Section>
@@ -331,7 +367,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 
 					<details className="group mb-3 rounded-lg border border-zinc-700/60 bg-zinc-900/40">
 						<summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-sm font-semibold text-zinc-200">
-							<span>Export</span>
+							<span>Export/Import</span>
 							<ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
 						</summary>
 						<div className="flex flex-row flex-wrap gap-2 px-4 pb-4 pt-1">
@@ -341,6 +377,16 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 							<Button variant="accent" icon={<FileSpreadsheet className="h-4 w-4" />} disabled={isBusy} onClick={handleExportSpreadsheet}>
 								{isExporting ? "Exporting..." : "Export Spreadsheet (XLSX)"}
 							</Button>
+							<Button variant="info" icon={<Upload className="h-4 w-4" />} disabled={isBusy} onClick={handleImportButtonClick}>
+								{isImporting ? "Importing..." : "Import Full-Res ZIP"}
+							</Button>
+							<input
+								ref={importFileInputRef}
+								type="file"
+								accept="application/zip,.zip"
+								className="hidden"
+								onChange={handleImportZipSelected}
+							/>
 						</div>
 					</details>
 
