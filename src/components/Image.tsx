@@ -15,6 +15,7 @@ interface ImageWithContextMenuProps {
 }
 
 const IMAGE_CONTEXT_MENU_DEFAULT_SIZE = { width: 160, height: 96 };
+const HOVER_START_DEBOUNCE_MS = 100;
 
 const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	imageId,
@@ -29,6 +30,7 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	const { style } = useStyling();
 	const contextMenu = useContextMenu(IMAGE_CONTEXT_MENU_DEFAULT_SIZE);
 	const textInputRef = useRef<HTMLTextAreaElement>(null);
+	const hoverTimeoutRef = useRef<number | undefined>(undefined);
 
 	useEffect(() => {
 		setDraftText(imageText ?? "");
@@ -43,10 +45,12 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	}, [isTextModalOpen]);
 
 	const handleMouseEnter = () => {
-		setIsHovered(true);
+		window.clearTimeout(hoverTimeoutRef.current);
+		hoverTimeoutRef.current = window.setTimeout(() => setIsHovered(true), HOVER_START_DEBOUNCE_MS);
 	};
 
 	const handleMouseLeave = () => {
+		window.clearTimeout(hoverTimeoutRef.current);
 		setIsHovered(false);
 	};
 
