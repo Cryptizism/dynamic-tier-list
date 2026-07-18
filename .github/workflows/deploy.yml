@@ -5,15 +5,32 @@ on:
     branches: [ master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
 
     runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v2
 
-    - name: Deploy react app to github pages
-      uses: tanwanimohit/deploy-react-to-ghpages@v1.0.1
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 18
+        cache: npm
+
+    - name: Install and build
+      run: |
+        npm ci
+        npm run build
       env:
         CI: ""
+
+    - name: Deploy react app to github pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./build
+        keep_files: true
