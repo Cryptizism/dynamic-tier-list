@@ -1,35 +1,25 @@
-import { useState, useEffect, useContext, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, ChangeEvent } from "react";
 import { ReactSortable } from "react-sortablejs";
+import { Image as ImageIcon, Settings2 } from "lucide-react";
 import SettingsModal from "./SettingsModal";
 import Image from "./Image";
-import { StylingContext } from "../App";
-import {
-	getImageStore,
-	migrateImageStoresFromLocalStorage,
-	deleteOriginalImageData,
-	setOriginalImageData,
-	setImageStore,
-	getFullResolutionImages,
-	resizeStoredImages,
-	resizeImageDataUrl,
-} from "../utils/imageStore";
-
-interface ImageItem {
-	id: number;
-	url: string;
-	text?: string;
-}
+import { useStyling } from "../context/StylingContext";
+import { useResponsivePixelSize } from "../hooks/useResponsivePixelSize";
+import { useImageList } from "../hooks/useImageList";
+import { ImageRepository } from "../persistence/ImageRepository";
 
 const ImageHolder = () => {
-	const { style } = useContext(StylingContext);
+	const { style } = useStyling();
+	const { pixelSize, isRefreshOnlyRef } = useResponsivePixelSize(style.size);
 
-	const [images, setImages] = useState<ImageItem[]>([]);
-	const [hasHydratedImages, setHasHydratedImages] = useState(false);
-	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [previewPixelSize, setPreviewPixelSize] = useState(() =>
-		Math.max(1, Math.round(style.size * (window.devicePixelRatio || 1)))
+	const { images, setImages, addImage, deleteImage, editImageText } = useImageList(
+		ImageRepository.IMAGE_HOLDER_LIST_KEY,
+		{ size: pixelSize, quality: style.quality, pasteScaleMode: style.pasteScaleMode },
+		isRefreshOnlyRef,
 	);
-	const isPreviewRefreshRef = useRef(false);
+
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const openModal = () => {
 		setIsModalOpen(true);
@@ -39,70 +29,24 @@ const ImageHolder = () => {
 		setIsModalOpen(false);
 	};
 
-	const getPreviewPixelSize = useCallback(
-		() => Math.max(1, Math.round(style.size * (window.devicePixelRatio || 1))),
-		[style.size]
-	);
+	const processFiles = useCallback(
+		(files: File[]) => {
+			const time = Date.now();
 
-	useEffect(() => {
-		let debounceHandle: number | undefined;
+			files.forEach((file, index) => {
+				if (!file.type.startsWith("image/")) return;
 
-		const schedulePreviewRefresh = () => {
-			if (debounceHandle !== undefined) {
-				window.clearTimeout(debounceHandle);
-			}
-
-			debounceHandle = window.setTimeout(() => {
-				setPreviewPixelSize((currentValue) => {
-					const nextValue = getPreviewPixelSize();
-					if (currentValue === nextValue) {
-						isPreviewRefreshRef.current = false;
-						return currentValue;
+				const reader = new FileReader();
+				reader.onload = (readerEvent) => {
+					const result = readerEvent.target?.result;
+					if (typeof result === "string") {
+						void addImage(time + index, result);
 					}
-					isPreviewRefreshRef.current = true;
-					return nextValue;
-				});
-			}, 150);
-		};
-
-		setPreviewPixelSize(getPreviewPixelSize());
-		window.addEventListener("resize", schedulePreviewRefresh);
-		window.addEventListener("scroll", schedulePreviewRefresh, { passive: true });
-		window.visualViewport?.addEventListener("resize", schedulePreviewRefresh);
-		window.visualViewport?.addEventListener("scroll", schedulePreviewRefresh, { passive: true });
-
-		return () => {
-			if (debounceHandle !== undefined) {
-				window.clearTimeout(debounceHandle);
-			}
-
-			window.removeEventListener("resize", schedulePreviewRefresh);
-			window.removeEventListener("scroll", schedulePreviewRefresh);
-			window.visualViewport?.removeEventListener("resize", schedulePreviewRefresh);
-			window.visualViewport?.removeEventListener("scroll", schedulePreviewRefresh);
-		};
-	}, [getPreviewPixelSize]);
-
-	const storeImportedImage = useCallback(
-		async (imageId: number, originalDataUrl: string) => {
-			try {
-				await setOriginalImageData({ id: imageId, url: originalDataUrl });
-			} catch (error) {
-				console.error("Failed to save original image data:", error);
-			}
-
-			const previewImageData = await resizeImageDataUrl(originalDataUrl, {
-				size: previewPixelSize,
-				quality: style.quality,
-				pasteScaleMode: style.pasteScaleMode,
+				};
+				reader.readAsDataURL(file);
 			});
-
-			setImages((prevImages) => [
-				...prevImages,
-				{ id: imageId, url: previewImageData, text: "" }
-			]);
 		},
-		[previewPixelSize, style.pasteScaleMode, style.quality]
+		[addImage]
 	);
 
 	const handleDrop = useCallback(
@@ -112,43 +56,27 @@ const ImageHolder = () => {
 
 			if (event.dataTransfer.getData("application/x-tier") !== "true") {
 				if (event.dataTransfer.files.length > 0) {
-					const time = Date.now();
-					const files = Array.from(event.dataTransfer.files);
-
-					files.forEach((file, index) => {
-						if (!file.type.startsWith("image/")) return;
-
-						const reader = new FileReader();
-						reader.onload = (readerEvent) => {
-							const result = readerEvent.target?.result;
-							if (typeof result === "string") {
-								void storeImportedImage(time + index, result);
-							}
-						};
-						reader.readAsDataURL(file);
-					});
+					processFiles(Array.from(event.dataTransfer.files));
 				}
 			}
 		},
-		[storeImportedImage]
+		[processFiles]
 	);
+
+	const openFileExplorer = () => {
+		fileInputRef.current?.click();
+	};
+
+	const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+		if (event.target.files && event.target.files.length > 0) {
+			processFiles(Array.from(event.target.files));
+		}
+		event.target.value = "";
+	};
 
 	const dragStart = useCallback((event: DragEvent) => {
 		if (event.dataTransfer == null) return;
 		event.dataTransfer.setData("application/x-tier", "true");
-	}, []);
-
-	const handleDeleteImage = useCallback((imageId: number) => {
-		deleteOriginalImageData(imageId).catch((error) => {
-			console.error("Failed to delete original image data:", error);
-		});
-		setImages((prevImages) => prevImages.filter((img) => img.id !== imageId));
-	}, []);
-
-	const handleEditImageText = useCallback((imageId: number, nextText: string) => {
-		setImages((prevImages) =>
-			prevImages.map((img) => (img.id === imageId ? { ...img, text: nextText } : img))
-		);
 	}, []);
 
 	const handlePaste = useCallback(
@@ -168,38 +96,13 @@ const ImageHolder = () => {
 				reader.onloadend = (readerEvent) => {
 					const result = typeof readerEvent.target?.result === "string" ? readerEvent.target.result : null;
 					if (result) {
-						void storeImportedImage(time + i, result);
+						void addImage(time + i, result);
 					}
 				};
 			}
 		},
-		[storeImportedImage]
+		[addImage]
 	);
-
-	useEffect(() => {
-		let isMounted = true;
-
-		const loadImages = async () => {
-			await migrateImageStoresFromLocalStorage();
-			const storedImages = await getImageStore("imageHolder");
-			const resizedImages = await resizeStoredImages(storedImages, {
-				size: previewPixelSize,
-				quality: style.quality,
-				pasteScaleMode: style.pasteScaleMode,
-			});
-			if (isMounted) {
-				isPreviewRefreshRef.current = false;
-				setImages(resizedImages);
-				setHasHydratedImages(true);
-			}
-		};
-
-		loadImages();
-
-		return () => {
-			isMounted = false;
-		};
-	}, [previewPixelSize, style.pasteScaleMode, style.quality, style.size]);
 
 	useEffect(() => {
 		const dragOver = (event: DragEvent) => {
@@ -224,85 +127,73 @@ const ImageHolder = () => {
 		};
 	}, [handlePaste, dragStart, handleDrop]);
 
-	useEffect(() => {
-		if (!hasHydratedImages) {
-			return;
-		}
-
-		if (isPreviewRefreshRef.current) {
-			isPreviewRefreshRef.current = false;
-			return;
-		}
-
-		const persistImages = async () => {
-			try {
-				const fullResolutionImages = await getFullResolutionImages(images);
-				await setImageStore("imageHolder", fullResolutionImages);
-			} catch (error) {
-				window.alert("Failed to save images locally. You can try deleting some images or clearing local storage in settings.");
-				console.error("Failed to save images to IndexedDB:", error);
-			}
-		};
-
-		persistImages();
-	}, [images, hasHydratedImages]);
-
-
 	return (
-		<div className="bg-stone-700 flex">
+		<div className="flex border-t border-black/20 bg-stone-700">
 			<div className="flex flex-col flex-1">
-				{images.length === 0 ? (
-					<p className="text-gray-400 text-center w-full ignore-elements p-4">
-						Drag & Drop or Copy and Paste images in here!
-						<br />
-						If this is your first time using this you can right click tiers to edit them and drag them about, clicking the "Add Tier" will add more tiers (duh)
-						<br />
-						<span className="font-semibold text-gray-300">All images are stored locally on your PC and cannot be shared*</span>
-					</p>
-				) : (
-					<ReactSortable
-						list={images}
-						setList={setImages}
-						tag="div"
-						group="shared"
-						className="react-sortablejs flex space-x-4 p-4 min-h-[7rem] flex-wrap flex-1 items-center"
-						filter=".ignore-elements"
-					>
-						{images.map((image) => (
-							<Image
-								key={image.id}
-								imageId={image.id}
-								imageUrl={image.url}
-								imageText={image.text}
-								onDelete={handleDeleteImage}
-								onEditText={handleEditImageText}
-							/>
-						))}
-					</ReactSortable>
-				)}
-			</div>
-			<button className="bg-stone-600" onClick={openModal}>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					strokeWidth="1.5"
-					stroke="currentColor"
-					className="w-6 h-6 text-gray-400"
+				<ReactSortable
+					list={images}
+					setList={setImages}
+					tag="div"
+					group="shared"
+					className="react-sortablejs flex space-x-4 p-4 min-h-[7rem] flex-wrap flex-1 items-center"
+					filter=".ignore-elements"
 				>
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
-					/>
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-					/>
-				</svg>
+					{images.length === 0 ? (
+						<div
+							role="button"
+							tabIndex={0}
+							onClick={openFileExplorer}
+							onKeyDown={(event) => {
+								if (event.key === "Enter" || event.key === " ") {
+									event.preventDefault();
+									openFileExplorer();
+								}
+							}}
+							className="ignore-elements w-full m-4 flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-stone-600 p-6 text-center transition-colors hover:border-stone-500 hover:bg-stone-800/40"
+						>
+							<ImageIcon className="h-8 w-8 text-stone-500" strokeWidth={1.5} />
+							<p className="text-gray-400">
+								Drag & Drop, Copy and Paste, or <span className="font-semibold text-gray-300 underline">click here to browse</span> for images!
+								<br />
+								If this is your first time using this you can right click tiers to edit them and drag them about, clicking the &quot;Add Tier&quot; will add more tiers (duh)
+								<br />
+								<span className="font-semibold text-gray-300">All images are stored locally on your PC and cannot be shared*</span>
+							</p>
+							<input
+								ref={fileInputRef}
+								type="file"
+								accept="image/*"
+								multiple
+								className="hidden"
+								onClick={(event) => event.stopPropagation()}
+								onChange={handleFileInputChange}
+							/>
+						</div>
+					) : (
+						<>
+							{images.map((image) => (
+								<Image
+									key={image.id}
+									imageId={image.id}
+									imageUrl={image.url}
+									imageText={image.text}
+									onDelete={deleteImage}
+									onEditText={editImageText}
+								/>
+							))}
+						</>
+					)}
+				</ReactSortable>
+			</div>
+			<button
+				type="button"
+				aria-label="Open settings"
+				className="flex items-center justify-center self-stretch border-l border-black/20 bg-stone-600 px-4 text-gray-400 transition-colors hover:bg-stone-500 hover:text-gray-100"
+				onClick={openModal}
+			>
+				<Settings2 className="w-6 h-6" strokeWidth={1.5} />
 			</button>
-			<SettingsModal isOpen={isModalOpen} onClose={closeModal} setImages={setImages} />
+			<SettingsModal isOpen={isModalOpen} onClose={closeModal} />
 		</div>
 	);
 };
