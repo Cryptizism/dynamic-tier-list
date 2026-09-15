@@ -157,7 +157,7 @@ const ImageHolder = () => {
 								<br />
 								If this is your first time using this you can right click tiers to edit them and drag them about, clicking the &quot;Add Tier&quot; will add more tiers (duh)
 								<br />
-								<span className="font-semibold text-gray-300">All images are stored locally on your PC and cannot be shared*</span>
+								<span className="font-semibold text-gray-300">All images are stored locally, you can export and import in the settings</span>
 							</p>
 							<input
 								ref={fileInputRef}
