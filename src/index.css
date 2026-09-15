@@ -90,3 +90,10 @@ input[type="range"].styled-range::-moz-range-track {
 	border-radius: 9999px;
 	background: rgb(63 63 70);
 }
+
+.colour-picker label {
+    color: #fff !important;
+}
+.colour-picker input {
+    color: #000 !important;
+}

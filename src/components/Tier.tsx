@@ -107,6 +107,7 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 					<div className="p-3">
 						<FieldLabel icon={<Palette className="h-3.5 w-3.5" />}>Color</FieldLabel>
 						<SketchPicker
+							className="colour-picker"
 							color={editedColor}
 							onChange={handleColorChange}
 							disableAlpha
@@ -118,7 +119,6 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 								"#BFFF7F",
 								"#7FFF7F"
 							]}
-							className="text-black"
 							styles={{
 								default: {
 									picker: {

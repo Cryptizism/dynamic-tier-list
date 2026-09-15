@@ -33,9 +33,14 @@ interface ModalProps {
 
 type AspectRatioStyle = "preserve" | "fit" | "stretch";
 
+const removeTrailingCharacter = (str: string, char: string) => {
+	if (!str.endsWith(char)) return str;
+	return str.substring(0, str.length-1);
+}
+
 const AspectRatioPreviewImage: React.FC<{ ratio: AspectRatioStyle }> = ({ ratio }) => (
 	<img
-		src="/graggle-long.jpg"
+		src={`${removeTrailingCharacter(window.location.href, "/")}/graggle-long.jpg`}
 		alt="A plush monkey called Graggle Chimpson the Third"
 		style={{ height: "128px", width: "128px" }}
 		className={`mx-auto ${ratio}`}
