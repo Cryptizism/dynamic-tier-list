@@ -100,6 +100,7 @@ export const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) 
 					<div className="px-3 pb-3">
 						<FieldLabel icon={<Palette className="h-3.5 w-3.5" />}>Color</FieldLabel>
 						<SketchPicker
+							className="colour-picker"
 							color={color}
 							onChange={handleColorChange}
 							disableAlpha
@@ -111,7 +112,6 @@ export const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) 
 								"#BFFF7F",
 								"#7FFF7F"
 							]}
-							className="text-black"
 							styles={{
 								default: {
 									picker: {
