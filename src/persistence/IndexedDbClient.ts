@@ -39,8 +39,23 @@ export class IndexedDbClient {
 				}
 			};
 
-			request.onsuccess = () => resolve(request.result);
-			request.onerror = () => reject(request.error);
+			request.onsuccess = () => {
+				const db = request.result;
+				// Connections can be closed under us (e.g. when the site data is cleared like issue #7), dropping it so the next call reopens
+				// Note to self: if there's heavy performance issues investigate this
+				db.onclose = () => {
+					this.dbPromise = null;
+				};
+				db.onversionchange = () => {
+					db.close();
+					this.dbPromise = null;
+				};
+				resolve(db);
+			};
+			request.onerror = () => {
+				this.dbPromise = null;
+				reject(request.error);
+			};
 		});
 
 		return this.dbPromise;

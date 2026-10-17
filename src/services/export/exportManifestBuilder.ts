@@ -37,7 +37,7 @@ export const collectFullResolutionManifest = async (
 	for (let tierIndex = 0; tierIndex < safeTiers.length; tierIndex += 1) {
 		const tier = safeTiers[tierIndex];
 		const tierLabel = typeof tier.tierLabel === "string" ? tier.tierLabel : "";
-		const tierFolder = sanitizeFolderName(tierLabel || `tier_${tierIndex + 1}`);
+		const tierFolder = `${padIndex(tierIndex + 1)}_${sanitizeFolderName(tierLabel || `tier_${tierIndex + 1}`)}`;
 
 		const ids = await imageRepository.getList(ImageRepository.tierListKey(tier.id));
 		const records = await imageRepository.getRecords(ids);

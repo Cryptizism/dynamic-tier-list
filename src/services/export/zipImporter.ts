@@ -48,6 +48,18 @@ export const readManifestFromZip = async (zipFile: File): Promise<ExportManifest
 	}
 
 	const jsonEntries = parsed as ManifestJsonEntry[];
+
+	// Older exports could write several images to the same path, so importing them would swap image contents
+	const seenPaths = new Set<string>();
+	for (const jsonEntry of jsonEntries) {
+		if (seenPaths.has(jsonEntry.relativePath)) {
+			throw new Error(
+				`ZIP has multiple images saved as "${jsonEntry.relativePath}", so some images were overwritten when it was exported. Re-export it with the latest version.`,
+			);
+		}
+		seenPaths.add(jsonEntry.relativePath);
+	}
+
 	const entries: ExportManifestEntry[] = [];
 
 	for (const jsonEntry of jsonEntries) {
