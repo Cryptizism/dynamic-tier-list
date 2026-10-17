@@ -1,11 +1,8 @@
 import React, { ChangeEvent, FormEvent, useRef, useState } from "react";
 import { toBlob } from 'html-to-image';
 import {
-	Archive,
-	ChevronDown,
 	Copy,
 	Download,
-	FileSpreadsheet,
 	Gauge,
 	Image as ImageIcon,
 	Maximize2,
@@ -20,7 +17,6 @@ import { imageRepository } from "../persistence/ImageRepository";
 import { collectFullResolutionManifest } from "../services/export/exportManifestBuilder";
 import { buildExportZip } from "../services/export/zipExporter";
 import { importManifestIntoRepository, readManifestFromZip } from "../services/export/zipImporter";
-import { buildSpreadsheetExport } from "../services/export/spreadsheetExporter";
 import { ModalShell, ModalBody, ModalFooter } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { Section } from "./ui/Section";
@@ -208,51 +204,6 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 		}
 	};
 
-	const handleExportSpreadsheet = async () => {
-		if (isCopying || isSaving || isExporting) return;
-		if (!Array.isArray(tiers)) {
-			setExportStatus("Export unavailable: tier data is not ready yet.");
-			return;
-		}
-
-		setIsExporting(true);
-		setExportStatus("Collecting full-resolution images...");
-
-		try {
-			const manifest = await collectFullResolutionManifest(tiers);
-			if (manifest.length === 0) {
-				setExportStatus("No images to export.");
-				return;
-			}
-
-			setExportStatus("Building spreadsheet...");
-			const ratioMode =
-				selectedStyle.ratio === "stretch" || selectedStyle.ratio === "fit"
-					? selectedStyle.ratio
-					: "preserve";
-			const result = await buildSpreadsheetExport(manifest, {
-				embedImages: true,
-				imageSizePx: selectedStyle.size,
-				ratioMode,
-			});
-
-			const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
-			downloadBlob(result.spreadsheetBlob, `tierlist-${timestamp}.xlsx`);
-
-			if (!result.usedEmbeddedSpreadsheet && result.spreadsheetReason) {
-				setExportStatus(result.spreadsheetReason);
-				return;
-			}
-
-			setExportStatus("Export finished.");
-		} catch (error) {
-			console.error("Failed to export full-resolution images:", error);
-			setExportStatus("Export failed. Check browser console for details.");
-		} finally {
-			setIsExporting(false);
-		}
-	};
-
 	const handleImportButtonClick = () => {
 		if (isCopying || isSaving || isExporting || isImporting) return;
 		importFileInputRef.current?.click();
@@ -382,31 +333,23 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 						</Button>
 					</div>
 
-					<details className="group mb-3 rounded-lg border border-zinc-700/60 bg-zinc-900/40">
-						<summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-sm font-semibold text-zinc-200">
-							<span>Export/Import</span>
-							<ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
-						</summary>
-						<div className="flex flex-row flex-wrap gap-2 px-4 pb-4 pt-1">
-							<Button variant="warning" icon={<Archive className="h-4 w-4" />} disabled={isBusy} onClick={handleExportZip}>
-								{isExporting ? "Exporting..." : "Export Full-Res ZIP"}
-							</Button>
-							<Button variant="accent" icon={<FileSpreadsheet className="h-4 w-4" />} disabled={isBusy} onClick={handleExportSpreadsheet}>
-								{isExporting ? "Exporting..." : "Export Spreadsheet (XLSX)"}
-							</Button>
-							<Button variant="info" icon={<Upload className="h-4 w-4" />} disabled={isBusy} onClick={handleImportButtonClick}>
-								{isImporting ? "Importing..." : "Import Full-Res ZIP"}
-							</Button>
-							<input
-								ref={importFileInputRef}
-								type="file"
-								accept="application/zip,.zip"
-								className="hidden"
-								onChange={handleImportZipSelected}
-							/>
-						</div>
-					</details>
-
+					<hr className="border-1 border-zinc-600 mb-2" />
+					
+					<div className="flex w-full flex-1 gap-2 px-6 mb-2 pt-1">
+						<Button variant="warning" className="flex-1" icon={<Download className="h-4 w-4" />} disabled={isBusy} onClick={handleExportZip}>
+							{isExporting ? "Exporting..." : "Export Full-Res ZIP"}
+						</Button>
+						<Button variant="info" className="flex-1" icon={<Upload className="h-4 w-4" />} disabled={isBusy} onClick={handleImportButtonClick}>
+							{isImporting ? "Importing..." : "Import Full-Res ZIP"}
+						</Button>
+						<input
+							ref={importFileInputRef}
+							type="file"
+							accept="application/zip,.zip"
+							className="hidden"
+							onChange={handleImportZipSelected}
+						/>
+					</div>
 					{exportStatus && (
 						<p className={`mb-1 rounded-md border px-3 py-2 text-sm ${exportStatusClasses}`}>
 							{exportStatus}
