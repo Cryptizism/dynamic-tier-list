@@ -14,6 +14,12 @@
 	object-fit: fill;
 }
 
+.rect{
+	width: auto !important;
+	object-fit: cover;
+	aspect-ratio: 16/9;
+}
+
 @keyframes overlay-in {
 	from { opacity: 0; }
 	to { opacity: 1; }

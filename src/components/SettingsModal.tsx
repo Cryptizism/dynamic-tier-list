@@ -31,7 +31,7 @@ interface ModalProps {
 	onClose: () => void;
 }
 
-type AspectRatioStyle = "preserve" | "fit" | "stretch";
+type AspectRatioStyle = "preserve" | "fit" | "stretch" | "rect";
 
 const removeTrailingCharacter = (str: string, char: string) => {
 	if (!str.endsWith(char)) return str;
@@ -314,6 +314,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 								{ id: "preserve", value: "preserve", label: "Preserve", hoverElement: <AspectRatioPreviewImage ratio="preserve" /> },
 								{ id: "fit", value: "fit", label: "1:1 Fit", hoverElement: <AspectRatioPreviewImage ratio="fit" /> },
 								{ id: "stretch", value: "stretch", label: "1:1 Stretch", hoverElement: <AspectRatioPreviewImage ratio="stretch" /> },
+								{ id: "rect", value: "rect", label: "(16:9) Rect", hoverElement: <AspectRatioPreviewImage ratio="rect" /> },
 							]}
 						/>
 					</Section>
