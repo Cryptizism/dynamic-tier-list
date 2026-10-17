@@ -97,9 +97,9 @@ input[type="range"].styled-range::-moz-range-track {
 	background: rgb(63 63 70);
 }
 
-.colour-picker label {
+.color-picker label {
     color: #fff !important;
 }
-.colour-picker input {
+.color-picker input {
     color: #000 !important;
 }

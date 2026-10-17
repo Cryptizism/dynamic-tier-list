@@ -1,6 +1,5 @@
 import React from "react";
 import { ReactSortable } from "react-sortablejs";
-import { SketchPicker, ColorResult } from "react-color";
 import { Palette, SlidersHorizontal, Tag, Trash2 } from "lucide-react";
 import Image from "./Image";
 import { useStyling } from "../context/StylingContext";
@@ -11,6 +10,7 @@ import { useContextMenu } from "../hooks/useContextMenu";
 import { ImageRepository, imageRepository } from "../persistence/ImageRepository";
 import { ContextMenuPanel, ContextMenuHeader, ContextMenuItem } from "./ui/ContextMenu";
 import { FieldLabel, textInputClass } from "./ui/FormControls";
+import { ColorPicker } from "./ui/ColorPicker";
 
 interface TierProps {
 	id: number;
@@ -38,10 +38,10 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 	const editedColor = tierIndex !== -1 ? tiers[tierIndex].color : color;
 	const editedTierLabel = tierIndex !== -1 ? tiers[tierIndex].tierLabel : tierLabel;
 
-	const handleColorChange = (newColor: ColorResult) => {
+	const handleColorChange = (newColor: string) => {
 		if (tierIndex !== -1) {
 			const updatedTiers = [...tiers];
-			updatedTiers[tierIndex].color = newColor.hex;
+			updatedTiers[tierIndex].color = newColor;
 			setTiers(updatedTiers);
 		}
 	};
@@ -106,31 +106,7 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 					</ContextMenuHeader>
 					<div className="p-3">
 						<FieldLabel icon={<Palette className="h-3.5 w-3.5" />}>Color</FieldLabel>
-						<SketchPicker
-							className="colour-picker"
-							color={editedColor}
-							onChange={handleColorChange}
-							disableAlpha
-							presetColors={[
-								"#FF7F7F",
-								"#FFBF7F",
-								"#FFDF80",
-								"#FFFF7F",
-								"#BFFF7F",
-								"#7FFF7F"
-							]}
-							styles={{
-								default: {
-									picker: {
-										background: "#18181b",
-										border: "1px solid #3f3f46",
-										boxShadow: "none",
-										borderRadius: "0.5rem",
-										width: "auto",
-									},
-								},
-							}}
-						/>
+						<ColorPicker color={editedColor} onChange={handleColorChange} />
 					</div>
 					<div className="px-3 pb-3">
 						<FieldLabel htmlFor="tier-label-input" icon={<Tag className="h-3.5 w-3.5" />}>

@@ -1,9 +1,9 @@
 import React, { useState, ChangeEvent, FormEvent } from "react";
-import { SketchPicker, ColorResult } from "react-color";
 import { Palette, Plus, Tag, Pencil } from "lucide-react";
 import { useTiers } from "../context/TierContext";
-import { Button } from "./ui/Button";
+import { Button, toolbarButtonClass } from "./ui/Button";
 import { FieldLabel, textInputClass } from "./ui/FormControls";
+import { ColorPicker } from "./ui/ColorPicker";
 import { ContextMenuPanel, ContextMenuHeader } from "./ui/ContextMenu";
 
 interface ModalProps {
@@ -34,7 +34,7 @@ export const AddTierButton: React.FC = () => {
 		<>
 			<button
 				onClick={openModal}
-				className="flex items-center justify-center gap-2 bg-stone-600 hover:bg-stone-700 text-white font-semibold py-2 px-4 my-4 w-fit transition-colors"
+				className={toolbarButtonClass}
 			>
 				<Plus className="h-4 w-4" />
 				Add Tier
@@ -56,8 +56,8 @@ export const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) 
 		setTierLabel(event.target.value);
 	};
 
-	const handleColorChange = (newColor: ColorResult) => {
-		setColor(newColor.hex);
+	const handleColorChange = (newColor: string) => {
+		setColor(newColor);
 	};
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -99,31 +99,7 @@ export const TierModal: React.FC<ModalProps> = ({ isOpen, onClose, onAddTier }) 
 					</div>
 					<div className="px-3 pb-3">
 						<FieldLabel icon={<Palette className="h-3.5 w-3.5" />}>Color</FieldLabel>
-						<SketchPicker
-							className="colour-picker"
-							color={color}
-							onChange={handleColorChange}
-							disableAlpha
-							presetColors={[
-								"#FF7F7F",
-								"#FFBF7F",
-								"#FFDF80",
-								"#FFFF7F",
-								"#BFFF7F",
-								"#7FFF7F"
-							]}
-							styles={{
-								default: {
-									picker: {
-										background: "#18181b",
-										border: "1px solid #3f3f46",
-										boxShadow: "none",
-										borderRadius: "0.5rem",
-										width: "auto",
-									},
-								},
-							}}
-						/>
+						<ColorPicker color={color} onChange={handleColorChange} />
 					</div>
 					<div className="flex justify-end gap-2 border-t border-zinc-700/80 p-2">
 						<Button type="button" variant="ghost" onClick={onClose}>

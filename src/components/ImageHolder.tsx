@@ -1,22 +1,13 @@
-import { useState, useCallback, useEffect, useRef, ChangeEvent } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ReactSortable } from "react-sortablejs";
 import { Image as ImageIcon, Settings2 } from "lucide-react";
 import SettingsModal from "./SettingsModal";
 import Image from "./Image";
-import { useStyling } from "../context/StylingContext";
-import { useResponsivePixelSize } from "../hooks/useResponsivePixelSize";
-import { useImageList } from "../hooks/useImageList";
-import { ImageRepository } from "../persistence/ImageRepository";
+import { ImageFileInput } from "./ui/ImageFileInput";
+import { useImageHolder } from "../context/ImageHolderContext";
 
 const ImageHolder = () => {
-	const { style } = useStyling();
-	const { pixelSize, isRefreshOnlyRef } = useResponsivePixelSize(style.size);
-
-	const { images, setImages, addImage, deleteImage, editImageText } = useImageList(
-		ImageRepository.IMAGE_HOLDER_LIST_KEY,
-		{ size: pixelSize, quality: style.quality, pasteScaleMode: style.pasteScaleMode },
-		isRefreshOnlyRef,
-	);
+	const { images, setImages, addImageFiles, deleteImage, editImageText } = useImageHolder();
 
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,26 +20,6 @@ const ImageHolder = () => {
 		setIsModalOpen(false);
 	};
 
-	const processFiles = useCallback(
-		(files: File[]) => {
-			const time = Date.now();
-
-			files.forEach((file, index) => {
-				if (!file.type.startsWith("image/")) return;
-
-				const reader = new FileReader();
-				reader.onload = (readerEvent) => {
-					const result = readerEvent.target?.result;
-					if (typeof result === "string") {
-						void addImage(time + index, result);
-					}
-				};
-				reader.readAsDataURL(file);
-			});
-		},
-		[addImage]
-	);
-
 	const handleDrop = useCallback(
 		(event: DragEvent) => {
 			event.preventDefault();
@@ -56,22 +27,15 @@ const ImageHolder = () => {
 
 			if (event.dataTransfer.getData("application/x-tier") !== "true") {
 				if (event.dataTransfer.files.length > 0) {
-					processFiles(Array.from(event.dataTransfer.files));
+					addImageFiles(Array.from(event.dataTransfer.files));
 				}
 			}
 		},
-		[processFiles]
+		[addImageFiles]
 	);
 
 	const openFileExplorer = () => {
 		fileInputRef.current?.click();
-	};
-
-	const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-		if (event.target.files && event.target.files.length > 0) {
-			processFiles(Array.from(event.target.files));
-		}
-		event.target.value = "";
 	};
 
 	const dragStart = useCallback((event: DragEvent) => {
@@ -84,24 +48,12 @@ const ImageHolder = () => {
 			const items = event.clipboardData?.items;
 			if (!items) return;
 
-			const time = Date.now();
-			for (let i = 0; i < items.length; i++) {
-				const item = items[i];
-				if (item.type.indexOf("image") === -1) continue;
-
-				const blob = item.getAsFile();
-				const reader = new FileReader();
-				reader.readAsDataURL(blob || new Blob());
-
-				reader.onloadend = (readerEvent) => {
-					const result = typeof readerEvent.target?.result === "string" ? readerEvent.target.result : null;
-					if (result) {
-						void addImage(time + i, result);
-					}
-				};
-			}
+			const files = Array.from(items)
+				.map((item) => item.getAsFile())
+				.filter((file): file is File => file !== null);
+			addImageFiles(files);
 		},
-		[addImage]
+		[addImageFiles]
 	);
 
 	useEffect(() => {
@@ -159,15 +111,7 @@ const ImageHolder = () => {
 								<br />
 								<span className="font-semibold text-gray-300">All images are stored locally, you can export and import in the settings</span>
 							</p>
-							<input
-								ref={fileInputRef}
-								type="file"
-								accept="image/*"
-								multiple
-								className="hidden"
-								onClick={(event) => event.stopPropagation()}
-								onChange={handleFileInputChange}
-							/>
+							<ImageFileInput ref={fileInputRef} onFiles={addImageFiles} />
 						</div>
 					) : (
 						<>

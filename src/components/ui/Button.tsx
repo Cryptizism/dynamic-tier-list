@@ -13,6 +13,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 	secondary: "bg-zinc-700 text-zinc-200 hover:bg-zinc-600",
 };
 
+export const toolbarButtonClass = "flex items-center justify-center gap-2 bg-stone-600 hover:bg-stone-700 text-white font-semibold py-2 px-4 w-fit transition-colors";
+
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 	variant?: ButtonVariant;
 	icon?: ReactNode;
