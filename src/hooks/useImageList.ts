@@ -19,7 +19,7 @@ export const useImageList = (
 	resizeOptions: ImageResizeOptions,
 	isRefreshOnlyRef: MutableRefObject<boolean>,
 ): UseImageListResult => {
-	const { size, quality, pasteScaleMode } = resizeOptions;
+	const { size, quality, pasteScaleMode, ratio } = resizeOptions;
 
 	const [images, setImages] = useState<DisplayImageItem[]>([]);
 	const [hasHydrated, setHasHydrated] = useState(false);
@@ -30,7 +30,7 @@ export const useImageList = (
 		const load = async () => {
 			const ids = await imageRepository.getList(listKey);
 			const records = await imageRepository.getRecords(ids);
-			const displayItems = await buildDisplayItems(records, { size, quality, pasteScaleMode });
+			const displayItems = await buildDisplayItems(records, { size, quality, pasteScaleMode, ratio });
 
 			if (isMounted) {
 				isRefreshOnlyRef.current = false;
@@ -44,7 +44,7 @@ export const useImageList = (
 		return () => {
 			isMounted = false;
 		};
-	}, [listKey, size, quality, pasteScaleMode, isRefreshOnlyRef]);
+	}, [listKey, size, quality, pasteScaleMode, ratio, isRefreshOnlyRef]);
 
 	useEffect(() => {
 		if (!hasHydrated) {
@@ -69,10 +69,10 @@ export const useImageList = (
 				console.error("Failed to save image data:", error);
 			}
 
-			const previewUrl = await resizeImageDataUrl(fullResolutionUrl, { size, quality, pasteScaleMode });
+			const previewUrl = await resizeImageDataUrl(fullResolutionUrl, { size, quality, pasteScaleMode, ratio });
 			setImages((prevImages) => [...prevImages, { id: imageId, url: previewUrl, text: "" }]);
 		},
-		[size, quality, pasteScaleMode],
+		[size, quality, pasteScaleMode, ratio],
 	);
 
 	const deleteImage = useCallback((imageId: number) => {

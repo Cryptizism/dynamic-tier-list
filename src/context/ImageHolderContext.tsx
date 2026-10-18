@@ -17,7 +17,7 @@ export const ImageHolderProvider: React.FC<{ children: ReactNode }> = ({ childre
 
 	const imageList = useImageList(
 		ImageRepository.IMAGE_HOLDER_LIST_KEY,
-		{ size: pixelSize, quality: style.quality, pasteScaleMode: style.pasteScaleMode },
+		{ size: pixelSize, quality: style.quality, pasteScaleMode: style.pasteScaleMode, ratio: style.ratio },
 		isRefreshOnlyRef,
 	);
 	const { addImage } = imageList;

@@ -28,7 +28,7 @@ const Tier: React.FC<TierProps> = ({ id, color, tierLabel, onDelete }) => {
 
 	const { images, setImages, deleteImage, editImageText } = useImageList(
 		ImageRepository.tierListKey(id),
-		{ size: pixelSize, quality: style.quality, pasteScaleMode: style.pasteScaleMode },
+		{ size: pixelSize, quality: style.quality, pasteScaleMode: style.pasteScaleMode, ratio: style.ratio },
 		isRefreshOnlyRef,
 	);
 

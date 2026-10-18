@@ -21,8 +21,8 @@ const normalizeStyle = (value: unknown): Style => {
 
 	return {
 		ratio:
-			styleValue.ratio === "preserve" || styleValue.ratio === "fit" || styleValue.ratio === "stretch"
-				? styleValue.ratio
+			styleValue.ratio === "preserve" || styleValue.ratio === "fit" || styleValue.ratio === "stretch" || styleValue.ratio === "rect"
+				?styleValue.ratio
 				: DEFAULT_STYLE.ratio,
 		size: typeof styleValue.size === "number" ? styleValue.size : DEFAULT_STYLE.size,
 		quality: typeof styleValue.quality === "number" ? styleValue.quality : DEFAULT_STYLE.quality,

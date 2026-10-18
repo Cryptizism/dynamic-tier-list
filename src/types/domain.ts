@@ -16,7 +16,7 @@ export interface Tier {
 	tierLabel: string;
 }
 
-export type AspectRatioMode = "preserve" | "fit" | "stretch";
+export type AspectRatioMode = "preserve" | "fit" | "stretch" | "rect";
 export type PasteScaleMode = "fixed" | "preserve";
 
 export interface Style {
@@ -30,4 +30,5 @@ export interface ImageResizeOptions {
 	size: number;
 	quality: number;
 	pasteScaleMode: PasteScaleMode;
+	ratio: AspectRatioMode;
 }

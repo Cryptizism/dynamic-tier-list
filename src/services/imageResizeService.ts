@@ -1,4 +1,4 @@
-import { ImageResizeOptions, ImageRecord, DisplayImageItem } from "../types/domain";
+import { AspectRatioMode, ImageResizeOptions, ImageRecord, DisplayImageItem } from "../types/domain";
 
 const ALPHA_CAPABLE_MIME_PATTERN = /^data:image\/(png|gif|webp|svg\+xml);/i;
 
@@ -14,11 +14,14 @@ const encodeTransparentCanvas = (canvas: HTMLCanvasElement, quality: number): st
 	return canvas.toDataURL("image/png");
 };
 
+const RECT_ASPECT_RATIO = 16 / 9;
+
 const compressAndDownscaleImage = (
 	base64: string,
 	maxHeight: number,
 	qualityPercent: number,
 	shouldScale: boolean,
+	ratio: AspectRatioMode,
 ): Promise<string> => {
 	return new Promise((resolve) => {
 		const img = document.createElement("img");
@@ -30,7 +33,12 @@ const compressAndDownscaleImage = (
 				return;
 			}
 
-			const scale = shouldScale ? maxHeight / img.naturalHeight : Math.min(1, maxHeight / img.naturalHeight);
+			let targetScale = maxHeight / img.naturalHeight;
+			if (ratio === "rect") {
+				const maxWidth = maxHeight * RECT_ASPECT_RATIO;
+				targetScale = Math.max(targetScale, maxWidth / img.naturalWidth);
+			}
+			const scale = shouldScale ? targetScale : Math.min(1, targetScale);
 			canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
 			canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
 			ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -47,7 +55,13 @@ const compressAndDownscaleImage = (
 };
 
 export const resizeImageDataUrl = async (base64: string, options: ImageResizeOptions): Promise<string> => {
-	return compressAndDownscaleImage(base64, options.size, options.quality, options.pasteScaleMode === "fixed");
+	return compressAndDownscaleImage(
+		base64,
+		options.size,
+		options.quality,
+		options.pasteScaleMode === "fixed",
+		options.ratio,
+	);
 };
 
 export const buildDisplayItems = async (
