@@ -3,6 +3,9 @@ import React, { ReactNode, useRef, useState } from "react";
 export const textInputClass =
 	"w-full rounded-md border border-zinc-600 bg-zinc-900 p-2 text-sm text-white placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40";
 
+export const popoutPanelClass =
+	"rounded-lg border border-zinc-700 bg-zinc-800/80 backdrop-blur-[2px] shadow-black/80 shadow-2xl p-1";
+
 interface FieldLabelProps {
 	icon?: ReactNode;
 	htmlFor?: string;
@@ -104,7 +107,7 @@ export const SegmentedControlWithHover: React.FC<SegmentedControlProps> = ({ nam
 				</label>
 			))}
 			{hoveredOption?.hoverElement && (
-				<div className="absolute left-0 top-full z-10 mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-800/80 backdrop-blur-[2px] shadow-black/80 shadow-2xl p-1">
+				<div className={`absolute left-0 top-full z-10 mt-2 w-full ${popoutPanelClass}`}>
 					<div className="mb-1 text-center text-lg font-semibold text-zinc-400">
 						{hoveredOption.label}
 					</div>

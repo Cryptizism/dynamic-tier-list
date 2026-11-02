@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
-import { PenLine, Trash2, XCircle } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { ExternalLink, Eye, PenLine, Trash2, XCircle } from "lucide-react";
 import { useStyling } from "../context/StylingContext";
 import { useContextMenu } from "../hooks/useContextMenu";
 import { ContextMenuPanel, ContextMenuItem, ContextMenuDivider } from "./ui/ContextMenu";
 import { ModalShell, ModalBody, ModalFooter } from "./ui/Modal";
 import { Button } from "./ui/Button";
+import ImagePeek from "./ImagePeek";
+import { imageRepository } from "../persistence/ImageRepository";
+import { openImagePopout } from "../services/imagePopout";
 
 interface ImageWithContextMenuProps {
 	imageId: number;
@@ -14,8 +17,14 @@ interface ImageWithContextMenuProps {
 	onEditText: (imageId: number, nextText: string) => void;
 }
 
-const IMAGE_CONTEXT_MENU_DEFAULT_SIZE = { width: 160, height: 96 };
+const IMAGE_CONTEXT_MENU_DEFAULT_SIZE = { width: 160, height: 168 };
 const HOVER_START_DEBOUNCE_MS = 100;
+
+const ShiftKeyIcon: React.FC = () => (
+	<svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+		<path d="M12 4 20 12H15V20H9V12H4Z" />
+	</svg>
+);
 
 const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	imageId,
@@ -25,16 +34,38 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	onEditText
 }) => {
 	const [isHovered, setIsHovered] = useState(false);
+	const [isMouseOver, setIsMouseOver] = useState(false);
+	const [isShiftHeld, setIsShiftHeld] = useState(false);
+	const [isPeekPinned, setIsPeekPinned] = useState(false);
 	const [isTextModalOpen, setIsTextModalOpen] = useState(false);
 	const [draftText, setDraftText] = useState(imageText ?? "");
 	const { style } = useStyling();
 	const contextMenu = useContextMenu(IMAGE_CONTEXT_MENU_DEFAULT_SIZE);
 	const textInputRef = useRef<HTMLTextAreaElement>(null);
 	const hoverTimeoutRef = useRef<number | undefined>(undefined);
+	const imageRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		setDraftText(imageText ?? "");
 	}, [imageText]);
+
+	useEffect(() => {
+		if (!isMouseOver) {
+			return;
+		}
+
+		const handleShiftChange = (event: KeyboardEvent) => setIsShiftHeld(event.shiftKey);
+		const handleBlur = () => setIsShiftHeld(false);
+
+		window.addEventListener("keydown", handleShiftChange);
+		window.addEventListener("keyup", handleShiftChange);
+		window.addEventListener("blur", handleBlur);
+		return () => {
+			window.removeEventListener("keydown", handleShiftChange);
+			window.removeEventListener("keyup", handleShiftChange);
+			window.removeEventListener("blur", handleBlur);
+		};
+	}, [isMouseOver]);
 
 	useEffect(() => {
 		if (!isTextModalOpen) {
@@ -44,14 +75,34 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 		textInputRef.current?.focus();
 	}, [isTextModalOpen]);
 
-	const handleMouseEnter = () => {
+	const handleMouseEnter = (event: React.MouseEvent) => {
+		setIsMouseOver(true);
+		setIsShiftHeld(event.shiftKey);
 		window.clearTimeout(hoverTimeoutRef.current);
 		hoverTimeoutRef.current = window.setTimeout(() => setIsHovered(true), HOVER_START_DEBOUNCE_MS);
 	};
 
 	const handleMouseLeave = () => {
+		setIsMouseOver(false);
 		window.clearTimeout(hoverTimeoutRef.current);
 		setIsHovered(false);
+	};
+
+	const openPinnedPeek = () => {
+		setIsPeekPinned(true);
+		contextMenu.close();
+	};
+
+	const closePinnedPeek = useCallback(() => setIsPeekPinned(false), []);
+
+	const openInPopout = async () => {
+		contextMenu.close();
+		try {
+			const record = await imageRepository.getRecord(imageId);
+			await openImagePopout(record?.url ?? imageUrl);
+		} catch (error) {
+			console.error("Failed to open image popout:", error);
+		}
 	};
 
 	const openTextModal = () => {
@@ -81,10 +132,12 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 	return (
 		<>
 			<div
+				ref={imageRef}
 				className="relative"
 				onMouseEnter={handleMouseEnter}
 				onMouseLeave={handleMouseLeave}
 				onContextMenu={contextMenu.open}
+				onDragStart={() => setIsMouseOver(false)}
 			>
 				<img
 					src={imageUrl}
@@ -111,6 +164,15 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 
 			{contextMenu.isOpen && (
 				<ContextMenuPanel menuRef={contextMenu.menuRef} position={contextMenu.position} className="py-1">
+					<ContextMenuItem icon={<Eye className="h-4 w-4 text-zinc-400" />} onClick={openPinnedPeek}>
+						Peek
+						<span className="inline-flex items-center gap-0.5 whitespace-nowrap text-zinc-400">
+							(Hold Shift <ShiftKeyIcon />)
+						</span>
+					</ContextMenuItem>
+					<ContextMenuItem icon={<ExternalLink className="h-4 w-4 text-zinc-400" />} onClick={openInPopout}>
+						Open in Popout
+					</ContextMenuItem>
 					<ContextMenuItem icon={<PenLine className="h-4 w-4 text-zinc-400" />} onClick={openTextModal}>
 						Edit Text
 					</ContextMenuItem>
@@ -126,6 +188,16 @@ const ImageWithContextMenu: React.FC<ImageWithContextMenuProps> = ({
 						Delete Image
 					</ContextMenuItem>
 				</ContextMenuPanel>
+			)}
+
+			{(isPeekPinned || (isMouseOver && isShiftHeld && !isTextModalOpen)) && (
+				<ImagePeek
+					imageId={imageId}
+					fallbackUrl={imageUrl}
+					imageText={imageText}
+					anchorRef={imageRef}
+					onDismiss={isPeekPinned ? closePinnedPeek : undefined}
+				/>
 			)}
 
 			<ModalShell
