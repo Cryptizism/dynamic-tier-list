@@ -21,6 +21,7 @@ import { ModalShell, ModalBody, ModalFooter } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { Section } from "./ui/Section";
 import { SegmentedControl, SegmentedControlWithHover } from "./ui/FormControls";
+import StorageUsageSection from "./StorageUsageSection";
 
 interface ModalProps {
 	isOpen: boolean;
@@ -252,7 +253,7 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 			onClose={onClose}
 			title="Image Settings"
 			icon={<Settings2 className="h-5 w-5" />}
-			widthClassName="w-[32rem]"
+			widthClassName="w-[36rem]"
 		>
 			<form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
 				<ModalBody>
@@ -321,7 +322,9 @@ const SettingsModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 						/>
 					</Section>
 
-					<div className="mb-3 flex flex-row flex-wrap gap-2">
+					<StorageUsageSection />
+					
+					<div className="flex w-full flex-1 gap-2 px-6 py-2">
 						<Button variant="danger" icon={<Trash2 className="h-4 w-4" />} onClick={handleClearLocalStorage}>
 							Clear Local Storage
 						</Button>

@@ -1,7 +1,7 @@
 import { IndexedDbClient } from "./IndexedDbClient";
 import { readVersioned, writeVersioned } from "./versionedLocalStorage";
 import { IMAGE_STORE_SCHEMA_VERSION, LEGACY_IMAGE_IMPORT_VERSION } from "../config/dataVersions";
-import { ImageRecord } from "../types/domain";
+import { ImageRecord, ImageStorageUsage } from "../types/domain";
 
 interface LegacyImageItem {
 	id: number;
@@ -86,6 +86,25 @@ export class ImageRepository {
 	async clearAll(): Promise<void> {
 		await this.ensureMigrated();
 		await this.client.runInStore(ImageRepository.IMAGE_STORE, "readwrite", (store) => store.clear());
+	}
+
+	async getStorageUsage(): Promise<ImageStorageUsage> {
+		await this.ensureMigrated();
+		const { store } = await this.client.transaction(ImageRepository.IMAGE_STORE, "readonly");
+		const usage: ImageStorageUsage = { imageCount: 0, bytes: 0 };
+
+		await this.iterateCursor(store, (cursor) => {
+			const key = cursor.key;
+			const value = cursor.value;
+
+			if (typeof key === "string" && key.startsWith(ImageRepository.IMAGE_RECORD_KEY_PREFIX) && this.isImageRecord(value)) {
+				usage.imageCount += 1;
+				// close enough calculation (?) I just want an estimate, don't kill me if this is wrong
+				usage.bytes += value.url.length + (value.text?.length ?? 0);
+			}
+		});
+
+		return usage;
 	}
 
 	private recordKey(id: number): string {

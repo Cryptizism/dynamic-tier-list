@@ -4,6 +4,11 @@ export interface ImageRecord {
 	text: string;
 }
 
+export interface ImageStorageUsage {
+	imageCount: number;
+	bytes: number;
+}
+
 export interface DisplayImageItem {
 	id: number;
 	url: string;
